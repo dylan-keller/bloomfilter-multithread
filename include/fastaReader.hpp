@@ -1,4 +1,0 @@
-#ifndef FASTAREADER_HPP
-#define FASTAREADER_HPP
-
-#endif
