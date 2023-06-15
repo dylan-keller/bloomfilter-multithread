@@ -7,13 +7,15 @@ template<int BITS> class uint_kmer {
    using int_type =
       typename std::conditional< BITS <= 8,  uint8_t,
       typename std::conditional< BITS <= 16, uint16_t,
-      typename std::conditional< BITS <= 32, uint32_t, uint64_t >::type >::type >::type;
+      typename std::conditional< BITS <= 32, uint32_t, 
+      typename std::conditional< BITS <= 64, uint64_t,
+      __uint128_t >::type >::type >::type >::type;
    public:
    int_type i;
 
    uint_kmer(int a) : i(a){}
 
-   size_t get() {return i;}
+   int_type get() {return i;}
 };
 
 int main(){
@@ -28,13 +30,15 @@ int main(){
     }
 
     cout << sizeof(uint8_t) << " " << sizeof(uint16_t) << " " << sizeof(uint32_t) << " " << sizeof(uint64_t) << endl;
-        
+    /*   
     uint_kmer<1> b1 = ((1ul << (20)) - 1); 
     uint_kmer<15> b2 = ((1ul << (20)) - 1);
     uint_kmer<16> b3 = ((1ul << (20)) - 1); 
-    uint_kmer<17> b4 = ((1ul << (20)) - 1);
-    cout << sizeof(b1) <<" "<< sizeof(b2) <<" "<< sizeof(b3) <<" "<< sizeof(b4) <<" ";
+    uint_kmer<17> b4 = ((1ul << (100)) -1);
+    uint_kmer<99999> b5 = (unsigned long long)18446744073709551600+66;
+    __uint128_t test128 = (unsigned long long)18446744073709551600+66;
+    cout << sizeof(b1) <<" "<< sizeof(b2) <<" "<< sizeof(b3) <<" "<< sizeof(b4) <<" "<< sizeof(b5);
     cout << endl;
-    cout << b1.get() <<" "<< b2.get() <<" "<< b4.get();
-    cout << endl;
+    cout << b1.get() <<" "<< b2.get() <<" "<< b4.get() <<" "<< (unsigned long long)b5.get() <<" "<< (unsigned long long)(test128);
+    cout << endl;*/
 }
