@@ -9,14 +9,14 @@
 class KmerHandler{
   public:
     std::size_t k;
-    uint64_t current_kmer;
-    uint64_t mask;
+    __uint128_t current_kmer;
+    __uint128_t mask;
 
     KmerHandler(std::size_t k_);
     ~KmerHandler();
 
-    std::uint64_t next_Kmer(char nucleotide);
-    std::string uint_To_Kmer(uint64_t val, std::size_t k);
+    __uint128_t next_Kmer(char nucleotide);
+    std::string uint_To_Kmer(__uint128_t val, std::size_t k);
 };
 
 #endif

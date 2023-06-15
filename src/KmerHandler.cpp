@@ -1,13 +1,13 @@
 #include "../include/KmerHandler.hpp"
 
 KmerHandler::KmerHandler(std::size_t k_) :
-    k(k_), current_kmer(0), mask((1ul << (2 * (k-1))) - 1)
+    k(k_), current_kmer(0), mask((1ull << (2 * (k-1))) - 1)
 {};
 
 KmerHandler::~KmerHandler()
 {}
 
-std::uint64_t KmerHandler::next_Kmer(char nucleotide){
+__uint128_t KmerHandler::next_Kmer(char nucleotide){
     // Remove the leftmost nucleotide
         // e.g. 11111111 becomes 00111111
     this->current_kmer &= this->mask;
@@ -40,7 +40,7 @@ std::uint64_t KmerHandler::next_Kmer(char nucleotide){
     return this->current_kmer;
 }
 
-std::string uint_To_Kmer (uint64_t val, std::size_t k)
+std::string uint_To_Kmer (__uint128_t val, std::size_t k)
 {
 	std::stringstream ss;
 	for (std::size_t i=0 ; i<k ; i++)

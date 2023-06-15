@@ -8,7 +8,7 @@ SRC_DIR ?= src/
 DEPS_DIR ?= deps/
 INC_DIR ?= include/
 EXEC_NAME ?= main
-LIBS :=
+LIBS := 
 
 CPP := g++
 OPTI ?= -O2
