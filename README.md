@@ -1,3 +1,5 @@
+This project is under develeopment and does nothing for now.
+
 To compile a first time :
 ```
 make
