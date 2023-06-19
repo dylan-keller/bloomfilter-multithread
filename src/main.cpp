@@ -23,43 +23,27 @@ template<int BITS> class uint_kmer {
 
 int main(){
     cout << "hello, i do nothing for now\n";
-    
-    uint64_t a = 1ul;
 
-    for (int k=1; k<33;){
-        a = ((1ul << (2 * (k-1))) - 1);
-        cout << k << " " << bitset<64>(a) << " " << a << endl;
-        k = k*2;
-    }
-
-    cout << sizeof(uint8_t) << " " << sizeof(uint16_t) << " " << sizeof(uint32_t) << " " << sizeof(uint64_t) << endl;
-    /*   
-    uint_kmer<1> b1 = ((1ul << (20)) - 1); 
-    uint_kmer<15> b2 = ((1ul << (20)) - 1);
-    uint_kmer<16> b3 = ((1ul << (20)) - 1); 
-    uint_kmer<17> b4 = ((1ul << (100)) -1);
-    uint_kmer<99999> b5 = (unsigned long long)18446744073709551600+66;
-    __uint128_t test128 = (unsigned long long)18446744073709551600+66;
-    cout << sizeof(b1) <<" "<< sizeof(b2) <<" "<< sizeof(b3) <<" "<< sizeof(b4) <<" "<< sizeof(b5);
-    cout << endl;
-    cout << b1.get() <<" "<< b2.get() <<" "<< b4.get() <<" "<< (unsigned long long)b5.get() <<" "<< (unsigned long long)(test128);
-    cout << endl;*/
+    cout << "----------------------------------------" << endl;
 
     /* test sequence */
 	std::string seq = "GAGTGTCAAACATTCAGACAACAGCAGGGGTGCTCTGGAATCCTATGTGAGGAACAAACATTCAGGCCACAGTAG";
 	
 	/* k is the k-mer length */
 	unsigned k = 70;
-	
-	/* h is the number of hashes for each k-mer */
-	unsigned h = 1;
 
-	/* init ntHash state and compute hash values for first k-mer */
-	ntHashIterator itr(seq, h, k);
-	while (itr != itr.end()) {
-		std::cout << (*itr)[0] << std::endl;
-		++itr;
-	}
+    string kmer = seq.substr(0, k);
+    uint64_t hVal, fhVal=0, rhVal=0; // canonical, forward, and reverse-strand hash values
+    hVal = NTC64(kmer.c_str(), k, fhVal, rhVal); // initial hash value
+    //...
+    for (size_t i = 0; i < seq.length() - k; i++) {
+        hVal = NTC64(seq[i], seq[i+k], k, fhVal, rhVal); // consecutive hash values
+        cout << hVal << endl;
+        cout << fhVal << endl;
+        cout << rhVal << endl;
+        cout << "----------" << endl;
+        // hVal is the smallest of the two between fhVal and rhVal !
+    }
 
-	return 0;
+    return 0;
 }
