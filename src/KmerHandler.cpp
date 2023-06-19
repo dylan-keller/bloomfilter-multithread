@@ -36,6 +36,7 @@ __uint128_t KmerHandler::next_Kmer(char nucleotide){
         this->current_kmer += 3;
         break;
     }
+    // maybe replace with : (c>>1) & 0b11
 
     return this->current_kmer;
 }

@@ -3,8 +3,11 @@
 #include "/home/dylan/Documents/code/ntHash-AVX512-rs_avx/ntHashIterator.hpp"
 //#include "external/ntHash-AVX512/ntHashIterator.hpp"
 #include <string>
+#include <vector>
 
 using namespace std;
+
+// --------------------------------------------------
 
 template<int BITS> class uint_kmer {
    using int_type =
@@ -20,6 +23,34 @@ template<int BITS> class uint_kmer {
 
    int_type get() {return i;}
 };
+
+// --------------------------------------------------
+
+class Kmer {
+  public :
+    std::vector<uint64_t> arr;
+    ssize_t k;
+    Kmer(ssize_t k_) : arr(1+((k_-1)/32)), k{k_} {}
+
+    /*
+    friend ostream& operator<<(ostream& out, const Kmer& kmer) {
+        ssize_t i = 0;
+        ssize_t k_ = kmer.k;
+
+        while(k_>32){
+            out << bitset<64>(kmer.arr.at(i)) << " ";
+            i++;
+            k_-32;
+        }
+
+        out << bitset<k_>(kmer.arr.at(i));
+
+        return out;
+    }
+    */
+};
+
+// --------------------------------------------------
 
 int main(){
     cout << "hello, i do nothing for now\n";
@@ -44,6 +75,12 @@ int main(){
         cout << "----------" << endl;
         // hVal is the smallest of the two between fhVal and rhVal !
     }
+
+    Kmer k1(20);
+    Kmer k2(64);
+    Kmer k3(65);
+    Kmer k4(250);
+    cout << k1.arr.size() <<" "<< k2.arr.size() <<" "<< k3.arr.size() <<" "<< k4.arr.size() << endl;
 
     return 0;
 }
