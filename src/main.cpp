@@ -2,6 +2,8 @@
 #include <bitset>
 #include <string>
 #include <vector>
+#include <queue>
+#include <stdexcept>
 
 #include "/home/dylan/Documents/code/ntHash-AVX512-rs_avx/ntHashIterator.hpp"
 //#include "external/ntHash-AVX512/ntHashIterator.hpp"
@@ -32,13 +34,22 @@ template<int BITS> class uint_kmer {
 class Kmer {
   public :
     std::vector<uint64_t> arr;
-    ssize_t k;
-    Kmer(ssize_t k_) : arr(1+((k_-1)/32)), k{k_} {}
+    size_t k;
+    size_t len;
+
+    Kmer(size_t k_) : arr(1+((k_-1)/32), 0), k{k_}, len{0} {}
+
+    Kmer(size_t k_, string seq) : arr(1+((k_-1)/32), 0), k{k_}, len{0} {
+        // todo : make this function faster
+        for (size_t i=0; i<seq.length(); i++){
+            addNucl(seq[i]);
+        }
+    }
 
     /*
     friend ostream& operator<<(ostream& out, const Kmer& kmer) {
-        ssize_t i = 0;
-        ssize_t k_ = kmer.k;
+        size_t i = 0;
+        size_t k_ = kmer.k;
 
         while(k_>32){
             out << bitset<64>(kmer.arr.at(i)) << " ";
@@ -51,51 +62,75 @@ class Kmer {
         return out;
     }
     */
+
+    void addNucl(char c){
+        arr.at(len/32) |= ((c>>1)&0b1) << (2*(len%32));
+        arr.at(len/32) |= ((c>>2)&0b1) << ((2*(len%32))+1);
+        len++;
+    }
 };
 
 // ------------------------------------------------------------
 
-void run(string filename, const size_t k, const size_t m){
+void run(string filename, const size_t k, const size_t m, const size_t q){
+
+    // -------------------- Variables --------------------
 
     FastaReader fr(filename);
     KmerHandler kh(m);
 
-    // Will represent our k-sized window as we read the text
+    // Our k-sized window as we read the text
     string kmer_cur;
     kmer_cur.resize(k);
 
-    // At first, we need to read all the k first characters
-    for (size_t i=0; i<k; i++){
-        kmer_cur[i] = fr.next_char();
-    }
-
-    // Will be used to store the forward (resp. backward) hash values
-    // of every m-mer in the k-mer, for quick minimizer find
+    // The forward (resp. reverse-strand) hash values of
+    // every m-mer in the k-mer, for quick minimizer find
     uint64_t fhvalues[k-m+1];
     uint64_t rhvalues[k-m+1];
 
-    // Canonical, forward, and reverse-strand hash values
-    uint64_t hVal, fhVal=0, rhVal=0; 
+    // The forward (resp. reverse-strand) hash values
+    uint64_t fhVal=0, rhVal=0; 
+
+    // Tells us our kmer is reverse complement or not
+    bool isRevComp;
+
+    // The minimizer hash values :
+    uint64_t* fhmin; // forward minimizer hash value
+    uint64_t* rhmin; // reverse-strand minimizer hash value
+    uint64_t hmin; // canonical minimizer hash value
+
+    // Super-k-mer FIFOs (buckets)
+    queue<Kmer> fifos[q];
+        // note : maybe make it queues of Kmer* instead ?
+
+    // -------------------- Program --------------------
+
+    // At first, we need to read all the k first characters 
+    for (size_t i=0; i<k; i++){
+        kmer_cur[i] = fr.next_char();
+    }
 
     // Let's compute the first hash values using ntHash
     for (size_t i=0; i<k-m+1; i++){
         NTC64(kmer_cur[i], kmer_cur[i+m], m, fhVal, rhVal);
         fhvalues[i] = fhVal;
         rhvalues[i] = rhVal;
-        cout << fhvalues[i] << " " << rhvalues[i] << endl; // TEST
     }
 
-
-    uint64_t* fhmin = min_element(fhvalues, fhvalues+k-m+1);
-    uint64_t* rhmin = min_element(rhvalues, rhvalues+k-m+1);
-
-    cout << endl << *fhmin << " " << *rhmin << endl;
-
-
-
-    cout << endl << kmer_cur << endl; // TEST
+    // Let's find the first minimizer 
+    fhmin = min_element(fhvalues, fhvalues+k-m+1);
+    rhmin = min_element(rhvalues, rhvalues+k-m+1);
+    
+    if (*fhmin < *rhmin){ 
+        hmin = *fhmin;
+        isRevComp = false;
+    } else { // note : if they are equal, we arbitrarily pick the forward one
+        hmin = *rhmin;
+        isRevComp = true;
+    } 
     
 
+    
 }
 
 
@@ -106,34 +141,8 @@ int main(){
 
     cout << "----------------------------------------" << endl;
 
-    /* test sequence */
-	std::string seq = "GAGTGTCAAACATTCAGACAACAGCAGGGGTGCTCTGGAATCCTATGTGAGGAACAAACATTCAGGCCACAGTAG";
-	
-	/* k is the k-mer length */
-	unsigned k = 70;
-
-    string kmer = seq.substr(0, k);
-    uint64_t hVal, fhVal=0, rhVal=0; // canonical, forward, and reverse-strand hash values
-    hVal = NTC64(kmer.c_str(), k, fhVal, rhVal); // initial hash value
-    //...
-    for (size_t i = 0; i < seq.length() - k; i++) {
-        hVal = NTC64(seq[i], seq[i+k], k, fhVal, rhVal); // consecutive hash values
-        cout << hVal << endl;
-        cout << fhVal << endl;
-        cout << rhVal << endl;
-        cout << "---" << endl;
-        // hVal is the smallest of the two between fhVal and rhVal !
-    }
-
-    Kmer k1(20);
-    Kmer k2(64);
-    Kmer k3(65);
-    Kmer k4(250);
-    cout << k1.arr.size() <<" "<< k2.arr.size() <<" "<< k3.arr.size() <<" "<< k4.arr.size() << endl;
-
-    cout << "----------------------------------------" << endl;
-
-    run("/home/dylan/Documents/sequences/sars-cov-2.fasta", 20, 8);
+    run("/home/dylan/Documents/sequences/sars-cov-2.fasta", 20, 8, 10);
+    cout << endl;
 
     cout << "----------------------------------------" << endl;
 
@@ -141,6 +150,14 @@ int main(){
     rotate(s.begin(), s.begin() + 1, s.end());
     s[s.length()-1] = 'f';
     cout << s << endl;
+
+    cout << "----------------------------------------" << endl;
+
+    Kmer k1(40, "aaaaaaaaaaaaaaaaaaaaaaaAAAAAAAAgG");
+    //           XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXxx
+
+    cout << bitset<64>(k1.arr[0]) << endl;
+    cout << bitset<64>(k1.arr[1]) << endl;
 
     return 0;
 }
