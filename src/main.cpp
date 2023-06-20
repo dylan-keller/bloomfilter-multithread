@@ -1,9 +1,12 @@
 #include <iostream>
 #include <bitset>
-#include "/home/dylan/Documents/code/ntHash-AVX512-rs_avx/ntHashIterator.hpp"
-//#include "external/ntHash-AVX512/ntHashIterator.hpp"
 #include <string>
 #include <vector>
+
+#include "/home/dylan/Documents/code/ntHash-AVX512-rs_avx/ntHashIterator.hpp"
+//#include "external/ntHash-AVX512/ntHashIterator.hpp"
+#include "FastaReader.hpp"
+#include "KmerHandler.hpp"
 
 using namespace std;
 
@@ -24,7 +27,7 @@ template<int BITS> class uint_kmer {
    int_type get() {return i;}
 };
 
-// --------------------------------------------------
+// ------------------------------------------------------------
 
 class Kmer {
   public :
@@ -50,7 +53,53 @@ class Kmer {
     */
 };
 
-// --------------------------------------------------
+// ------------------------------------------------------------
+
+void run(string filename, const size_t k, const size_t m){
+
+    FastaReader fr(filename);
+    KmerHandler kh(m);
+
+    // Will represent our k-sized window as we read the text
+    string kmer_cur;
+    kmer_cur.resize(k);
+
+    // At first, we need to read all the k first characters
+    for (size_t i=0; i<k; i++){
+        kmer_cur[i] = fr.next_char();
+    }
+
+    // Will be used to store the forward (resp. backward) hash values
+    // of every m-mer in the k-mer, for quick minimizer find
+    uint64_t fhvalues[k-m+1];
+    uint64_t rhvalues[k-m+1];
+
+    // Canonical, forward, and reverse-strand hash values
+    uint64_t hVal, fhVal=0, rhVal=0; 
+
+    // Let's compute the first hash values using ntHash
+    for (size_t i=0; i<k-m+1; i++){
+        NTC64(kmer_cur[i], kmer_cur[i+m], m, fhVal, rhVal);
+        fhvalues[i] = fhVal;
+        rhvalues[i] = rhVal;
+        cout << fhvalues[i] << " " << rhvalues[i] << endl; // TEST
+    }
+
+
+    uint64_t* fhmin = min_element(fhvalues, fhvalues+k-m+1);
+    uint64_t* rhmin = min_element(rhvalues, rhvalues+k-m+1);
+
+    cout << endl << *fhmin << " " << *rhmin << endl;
+
+
+
+    cout << endl << kmer_cur << endl; // TEST
+    
+
+}
+
+
+// ------------------------------------------------------------
 
 int main(){
     cout << "hello, i do nothing for now\n";
@@ -72,7 +121,7 @@ int main(){
         cout << hVal << endl;
         cout << fhVal << endl;
         cout << rhVal << endl;
-        cout << "----------" << endl;
+        cout << "---" << endl;
         // hVal is the smallest of the two between fhVal and rhVal !
     }
 
@@ -81,6 +130,17 @@ int main(){
     Kmer k3(65);
     Kmer k4(250);
     cout << k1.arr.size() <<" "<< k2.arr.size() <<" "<< k3.arr.size() <<" "<< k4.arr.size() << endl;
+
+    cout << "----------------------------------------" << endl;
+
+    run("/home/dylan/Documents/sequences/sars-cov-2.fasta", 20, 8);
+
+    cout << "----------------------------------------" << endl;
+
+    string s = "aaabbbcccdddeee";
+    rotate(s.begin(), s.begin() + 1, s.end());
+    s[s.length()-1] = 'f';
+    cout << s << endl;
 
     return 0;
 }
