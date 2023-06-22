@@ -40,7 +40,7 @@ class Kmer {
     Kmer(size_t k_) : arr(1+((k_-1)/32), 0), k{k_}, len{0} {}
 
     Kmer(size_t k_, string seq) : arr(1+((k_-1)/32), 0), k{k_}, len{0} {
-        // todo : make this function faster
+        // NOTE : try to make this function faster perhaps
         for (size_t i=0; i<seq.length(); i++){
             addNucl(seq[i]);
         }
@@ -65,7 +65,6 @@ class Kmer {
 
     void addNucl(char c){
         arr.at(len/32) |= ((c>>1)&(3UL)) << (2*(len%32));
-
         len++;
     }
 };
@@ -79,7 +78,7 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
     FastaReader fr(filename);
     KmerHandler kh(m);
 
-    // Our k-sized window as we read the text
+    // Our k-sized window as we read the text, a.k.a. our "current" k-mer
     string kmer_cur;
     kmer_cur.resize(k);
 
@@ -101,11 +100,11 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
 
     // Super-k-mer FIFOs (buckets)
     queue<Kmer> fifos[q];
-        // note : maybe make it queues of Kmer* instead ?
+        // NOTE : maybe make it queues of Kmer* instead ?
 
     // -------------------- Program --------------------
 
-    // At first, we need to read all the k first characters 
+    // To start, we need to read all the k first characters 
     for (size_t i=0; i<k; i++){
         kmer_cur[i] = fr.next_char();
     }
@@ -128,6 +127,12 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
         hmin = *rhmin;
         isRevComp = true;
     } 
+
+    // We create the first super-k-mer with our current k-mer
+    Kmer sk(2*k-m, kmer_cur);
+
+    
+    
     
 
     
@@ -153,9 +158,8 @@ int main(){
 
     cout << "----------------------------------------" << endl;
 
-    Kmer k1(60, "gagagagagagggagggagagagagagagagagggaaagggaaaggg");
-    //           XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    //           gagagagagagggagggagagagagagagaga
+    Kmer k1(35, "tttcccgggaaagggagggagagagagagagagagggaaagggaaaggg");
+    // 32 first: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
     cout << bitset<64>(k1.arr[0]) << endl;
     cout << bitset<64>(k1.arr[1]) << endl;
