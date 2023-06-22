@@ -49,22 +49,36 @@ class Kmer {
 
     Kmer(const Kmer& km): arr(km.arr), k{km.k}, len{km.len}, isRevComp{km.isRevComp} {}
 
-    /*
-    friend ostream& operator<<(ostream& out, const Kmer& kmer) {
-        size_t i = 0;
-        size_t k_ = kmer.k;
+    // TODO : take care of reverse complement kmers (implement method or constructor)
+    // or let the sper-k-mer reader take care of it...
 
-        while(k_>32){
-            out << bitset<64>(kmer.arr.at(i)) << " ";
-            i++;
-            k_-32;
+    friend ostream& operator<<(ostream& out, const Kmer& kmer) {
+        string res;
+        char c;
+        res.resize(kmer.len);
+
+        for(size_t i=0; i<kmer.len; i++){
+            switch((kmer.arr.at(i/32) >> (2*(i%32))) & 3UL) {
+                case 0:
+                    c = 'A';
+                    break;
+                case 1:
+                    c = 'C';
+                    break;
+                case 2:
+                    c = 'T';
+                    break;
+                case 3:
+                    c = 'G';
+                    break;
+            }
+            res[i] = c;
         }
 
-        out << bitset<k_>(kmer.arr.at(i));
+        out << res;
 
         return out;
     }
-    */
 
     void addNucl(char c){
         arr.at(len/32) |= ((c>>1)&(3UL)) << (2*(len%32));
@@ -110,6 +124,9 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
     queue<Kmer> fifos[q];
         // NOTE : maybe make it queues of Kmer* instead ?
 
+    // Flag if the super-k-mer has ended and we need to create a new one
+    bool new_skmer_flag = false;
+
     // Last read char
     char c;
 
@@ -126,7 +143,6 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
             NTC64(kmer_cur[i], kmer_cur[i+m], m, fhVal, rhVal);
             fhvalues[i] = fhVal;
             rhvalues[i] = rhVal;
-            cout << fhVal <<" "<< rhVal << endl; // TEST
         }
 
         // Let's find the first minimizer 
@@ -134,8 +150,6 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
         rhpos = min_element(rhvalues, rhvalues+k-m+1) - rhvalues;
         fhmin = fhvalues[fhpos];
         rhmin = rhvalues[rhpos];
-
-        cout << endl << fhmin <<" "<< rhmin << endl; // TEST
         
         if (fhmin < rhmin){ 
             hmin = fhmin;
@@ -149,13 +163,12 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
 
         // We create the first super-k-mer with our current k-mer
         Kmer* sk = new Kmer(2*k-m, isRevComp, kmer_cur);
-
-        cout << hpos << " " << hmin << endl; // TEST
+        cout << *sk << endl; // TEST
 
         c = fr.next_char();
         counter = 0;
 
-        for(int ii=0; ii<10; ii++){ // TEST
+        for(int ii=0; ii<60; ii++){ // TEST
         // while(c != '\0'){ // \0 should be returned at the end of a sequence (not of file)
 
             // Get the next k-mer (rotate the string once leftwise, and replace last character)
@@ -181,16 +194,26 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
              */
 
             // Let's check if the prev minimizer is still part of the new k-mer.
-            if (hpos>0){
+            if (counter != hpos){ // If it is,
+                // We need to check if the new m-mer (rightmost) is a better minimizer.
+                if (fhvalues[counter] < hmin) {
+                    hmin = fhvalues[counter];
+                    hpos = counter;
+                    isRevComp = false;
+                    new_skmer_flag = true;
+                } else if (rhvalues[counter] < hmin) {
+                    hmin = rhvalues[counter];
+                    hpos = counter;
+                    isRevComp = true;
+                    new_skmer_flag = true;
+                } else {
+                    sk->addNucl(c);
+                    cout << *sk << endl;
+                }
+            } 
+            else { // If the minimizer fell out of the window, we end the super-k-mer.
+                new_skmer_flag = true;
 
-                // TODO
-
-            } // If the minimizer fell out of the window, we end the super-k-mer.
-            else {
-                // We need to add the super-k-mer to its correct queue.
-                fifos[hmin%q].push(*sk);
-
-                // Now we need to create a new super-k-mer. First we need its minimizer.
                 fhpos = min_element(fhvalues, fhvalues+k-m+1) - fhvalues;
                 rhpos = min_element(rhvalues, rhvalues+k-m+1) - rhvalues;
                 fhmin = fhvalues[fhpos];
@@ -205,6 +228,14 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
                     hpos = rhpos;
                     isRevComp = true;
                 } 
+            }
+
+            if (new_skmer_flag){
+                // We need to add the super-k-mer to its correct queue.
+                fifos[hmin%q].push(*sk);
+
+                // Now we need to create a new super-k-mer. First we need its minimizer.
+
 
                 // We can now create the new super-k-mer.
                 sk = new Kmer(2*k-m, isRevComp, kmer_cur);
@@ -212,10 +243,27 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
 
             c = fr.next_char();
             counter = (counter+1)%(k-m+1);
+            new_skmer_flag = false;
         }
     
     } while (false); // TEST ; for now we don't want to loop over the whole file
     //} while (c != EOF)
+
+    for (size_t i=0; i<q; i++){
+        cout << "[ queue " << i << " ]" << endl;
+        /*
+        for (size_t j=0; j<fifos[i].size(); j++){
+            cout << fifos[i].front() << endl;
+            fifos[i].pop();
+        }
+        */
+        while(!fifos[i].empty()){
+            cout << fifos[i].front() << endl;
+            fifos[i].pop();
+        }
+    }
+
+
 
 
 }
@@ -228,23 +276,17 @@ int main(){
 
     cout << "----------------------------------------" << endl;
 
-    run("/home/dylan/Documents/sequences/sars-cov-2.fasta", 20, 8, 10);
-    cout << endl;
+    run("/home/dylan/Documents/sequences/sars-cov-2.fasta", 10, 4, 1);
+    // WITH VALUES k = 10 AND m = 4 IT DOESNT WORK (first superkmer is wrong) !!
 
     cout << "----------------------------------------" << endl;
 
-    string s = "aaabbbcccdddeee";
-    rotate(s.begin(), s.begin() + 1, s.end());
-    s[s.length()-1] = 'f';
-    cout << s << endl;
-
-    cout << "----------------------------------------" << endl;
-
-    Kmer k1(35, "tttcccgggaaagggagggagagagagagagagagggaaagggaaaggg");
+    Kmer k1(35, false, "tttcccgggaaagggagggagagagagagagagagggaaagggaaaggg");
     // 32 first: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
     cout << bitset<64>(k1.arr[0]) << endl;
     cout << bitset<64>(k1.arr[1]) << endl;
+    cout << k1 << endl;
 
     return 0;
 }
