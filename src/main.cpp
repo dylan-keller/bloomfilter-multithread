@@ -64,8 +64,8 @@ class Kmer {
     */
 
     void addNucl(char c){
-        arr.at(len/32) |= ((c>>1)&0b1) << (2*(len%32));
-        arr.at(len/32) |= ((c>>2)&0b1) << ((2*(len%32))+1);
+        arr.at(len/32) |= ((c>>1)&(3UL)) << (2*(len%32));
+
         len++;
     }
 };
@@ -153,8 +153,9 @@ int main(){
 
     cout << "----------------------------------------" << endl;
 
-    Kmer k1(40, "aaaaaaaaaaaaaaaaaaaaaaaAAAAAAAAgG");
-    //           XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXxx
+    Kmer k1(60, "gagagagagagggagggagagagagagagagagggaaagggaaaggg");
+    //           XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    //           gagagagagagggagggagagagagagagaga
 
     cout << bitset<64>(k1.arr[0]) << endl;
     cout << bitset<64>(k1.arr[1]) << endl;
