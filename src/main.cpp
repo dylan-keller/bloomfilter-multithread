@@ -2,6 +2,7 @@
 #include <bitset>
 #include <string>
 #include <vector>
+#include <algorithm>
 #include <queue>
 #include <stdexcept>
 #include <thread>
@@ -9,86 +10,9 @@
 #include "/home/dylan/Documents/code/ntHash-AVX512-rs_avx/ntHashIterator.hpp"
 //#include "external/ntHash-AVX512/ntHashIterator.hpp"
 #include "FastaReader.hpp"
-#include "KmerHandler.hpp"
+#include "Kmer.hpp"
 
 using namespace std;
-
-// ------------------------------------------------------------
-
-/*
- * Kmer
- *
- * Class used to represent a k-mer or super-k-mer. Each nucleotide is represented
- * using 2 bits : 
- * A:00, C:01, T:10, G:11
- * 
- * Attributes :
- * - std::vector<uint64_t> arr : used to store the bits representing the k-mer. 
- *                               first letter is the 2 lowest bits of arr.at(0),
- *                               second letter is the 3rd and 4th bit of arr.at(0),
- *                               the 33rd letter is the 2 lowest bits of arr.at(1),
- *                               and so on.
- * - size_t k : size of the k-mer.
- *              a super-k-mer with m-sized minimizer should have 
- *              this attribute set to 2*k-m.
- * - size_t len : how many letters are in this k-mer.
- *                useful because otherwise we can't know if 00 is an
- *                empty char or an A.
- */
-class Kmer {
-  public :
-    std::vector<uint64_t> arr;
-    size_t k;
-    size_t len;
-    bool isRevComp;
-
-    Kmer(size_t k_, bool isRevComp_) : arr(1+((k_-1)/32), 0), k{k_}, len{0}, isRevComp{isRevComp_}{}
-
-    Kmer(size_t k_, bool isRevComp_, string seq) : arr(1+((k_-1)/32), 0), k{k_}, len{0}, isRevComp{isRevComp_}{
-        // NOTE : try to make this function faster perhaps
-        for (size_t i=0; i<seq.length(); i++){
-            addNucl(seq[i]);
-        }
-    }
-
-    Kmer(const Kmer& km): arr(km.arr), k{km.k}, len{km.len}, isRevComp{km.isRevComp} {}
-
-    // TODO : take care of reverse complement kmers (implement method or constructor)
-    // or let the super-k-mer reader take care of it...
-
-    friend ostream& operator<<(ostream& out, const Kmer& kmer) {
-        string res;
-        char c;
-        res.resize(kmer.len);
-
-        for(size_t i=0; i<kmer.len; i++){
-            switch((kmer.arr.at(i/32) >> (2*(i%32))) & 3UL) {
-                case 0:
-                    c = 'A';
-                    break;
-                case 1:
-                    c = 'C';
-                    break;
-                case 2:
-                    c = 'T';
-                    break;
-                case 3:
-                    c = 'G';
-                    break;
-            }
-            res[i] = c;
-        }
-
-        out << res;
-
-        return out;
-    }
-
-    void addNucl(char c){
-        arr.at(len/32) |= ((c>>1)&(3UL)) << (2*(len%32));
-        len++;
-    }
-};
 
 // ------------------------------------------------------------
 
