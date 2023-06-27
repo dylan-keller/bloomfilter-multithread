@@ -12,25 +12,28 @@
 
 using namespace std;
 
-// --------------------------------------------------
-
-template<int BITS> class uint_kmer {
-   using int_type =
-      typename std::conditional< BITS <= 8,  uint8_t,
-      typename std::conditional< BITS <= 16, uint16_t,
-      typename std::conditional< BITS <= 32, uint32_t, 
-      typename std::conditional< BITS <= 64, uint64_t,
-      __uint128_t >::type >::type >::type >::type;
-   public:
-   int_type i;
-
-   uint_kmer(int a) : i(a){}
-
-   int_type get() {return i;}
-};
-
 // ------------------------------------------------------------
 
+/*
+ * Kmer
+ *
+ * Class used to represent a k-mer or super-k-mer. Each nucleotide is represented
+ * using 2 bits : 
+ * A:00, C:01, T:10, G:11
+ * 
+ * Attributes :
+ * - std::vector<uint64_t> arr : used to store the bits representing the k-mer. 
+ *                               first letter is the 2 lowest bits of arr.at(0),
+ *                               second letter is the 3rd and 4th bit of arr.at(0),
+ *                               the 33rd letter is the 2 lowest bits of arr.at(1),
+ *                               and so on.
+ * - size_t k : size of the k-mer.
+ *              a super-k-mer with m-sized minimizer should have 
+ *              this attribute set to 2*k-m.
+ * - size_t len : how many letters are in this k-mer.
+ *                useful because otherwise we can't know if 00 is an
+ *                empty char or an A.
+ */
 class Kmer {
   public :
     std::vector<uint64_t> arr;
@@ -50,7 +53,7 @@ class Kmer {
     Kmer(const Kmer& km): arr(km.arr), k{km.k}, len{km.len}, isRevComp{km.isRevComp} {}
 
     // TODO : take care of reverse complement kmers (implement method or constructor)
-    // or let the sper-k-mer reader take care of it...
+    // or let the super-k-mer reader take care of it...
 
     friend ostream& operator<<(ostream& out, const Kmer& kmer) {
         string res;
@@ -163,13 +166,12 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
 
         // We create the first super-k-mer with our current k-mer
         Kmer* sk = new Kmer(2*k-m, isRevComp, kmer_cur);
-        cout << *sk << endl; // TEST
 
         c = fr.next_char();
         counter = 0;
 
-        for(int ii=0; ii<60; ii++){ // TEST
-        // while(c != '\0'){ // \0 should be returned at the end of a sequence (not of file)
+        // for(int ii=0; ii<60; ii++){ // TEST
+        while(c != '\0'){ // \0 should be returned at the end of a sequence
 
             // Get the next k-mer (rotate the string once leftwise, and replace last character)
             rotate(kmer_cur.begin(), kmer_cur.begin()+1, kmer_cur.end());
@@ -208,7 +210,6 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
                     new_skmer_flag = true;
                 } else {
                     sk->addNucl(c);
-                    cout << *sk << endl;
                 }
             } 
             else { // If the minimizer fell out of the window, we end the super-k-mer.
@@ -234,10 +235,7 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
                 // We need to add the super-k-mer to its correct queue.
                 fifos[hmin%q].push(*sk);
 
-                // Now we need to create a new super-k-mer. First we need its minimizer.
-
-
-                // We can now create the new super-k-mer.
+                // We can now create the new super-k-mer, starting at the current k-mer.
                 sk = new Kmer(2*k-m, isRevComp, kmer_cur);
             }
 
@@ -250,18 +248,16 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
     //} while (c != EOF)
 
     for (size_t i=0; i<q; i++){
-        cout << "[ queue " << i << " ]" << endl;
+        cout << fifos[i].size() << " " ;
+        
         /*
-        for (size_t j=0; j<fifos[i].size(); j++){
-            cout << fifos[i].front() << endl;
-            fifos[i].pop();
-        }
-        */
         while(!fifos[i].empty()){
             cout << fifos[i].front() << endl;
             fifos[i].pop();
         }
+        */
     }
+    cout << endl;
 
 
 
@@ -276,17 +272,9 @@ int main(){
 
     cout << "----------------------------------------" << endl;
 
-    run("/home/dylan/Documents/sequences/sars-cov-2.fasta", 10, 4, 1);
-    // WITH VALUES k = 10 AND m = 4 IT DOESNT WORK (first superkmer is wrong) !!
+    run("/home/dylan/Documents/sequences/sars-cov-2.fasta", 129, 65, 5);
 
     cout << "----------------------------------------" << endl;
-
-    Kmer k1(35, false, "tttcccgggaaagggagggagagagagagagagagggaaagggaaaggg");
-    // 32 first: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-    cout << bitset<64>(k1.arr[0]) << endl;
-    cout << bitset<64>(k1.arr[1]) << endl;
-    cout << k1 << endl;
 
     return 0;
 }
