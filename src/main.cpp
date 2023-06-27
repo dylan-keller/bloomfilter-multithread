@@ -12,7 +12,48 @@
 #include "FastaReader.hpp"
 #include "Kmer.hpp"
 
+#include<unistd.h>
+
 using namespace std;
+
+// ------------------------------------------------------------
+
+void threadfun(queue<Kmer>* fifo, int i){
+    sleep(1+i);
+    while(true){
+        if(!fifo->empty()){
+            if(fifo->front().len == 0){ // sent if fasta file is finished
+                cout << endl << "[thread " << i << " over]";
+                return;
+            } else {
+                cout << endl << "(" << i << " " << fifo->front() << " " << i <<")";
+                //delete &fifo->front();
+                fifo->pop();
+            }
+        } else {
+            cout << i ;
+        }
+    }
+}
+
+// ------------------------------------------------------------
+
+void fun1(char c){
+    for (int i=0; i<300; i++){
+        cout << c;
+    }
+    cout << "[end thread 1]";
+}
+
+void fun2(char c1, char c2){    
+    for (int i=0; i<100; i++){
+        cout << c1;
+    }
+    for (int i=0; i<100; i++){
+        cout << c2;
+    }
+    cout << "[end thread2]";
+}
 
 // ------------------------------------------------------------
 
@@ -52,6 +93,9 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
     queue<Kmer> fifos[q];
         // NOTE : maybe make it queues of Kmer* instead ?
 
+    // Threads, each associated to a super-k-mer fifo
+    vector<thread> thread_fifos;
+
     // Flag if the super-k-mer has ended and we need to create a new one
     bool new_skmer_flag = false;
 
@@ -59,6 +103,11 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
     char c;
 
     // -------------------- Program --------------------
+
+    for (size_t i=0; i<q; i++){
+        //thread_fifos.emplace_back(fun1, 'x');
+        thread_fifos.emplace_back(threadfun, &fifos[i], i);
+    }
 
     do {
         // To start, we need to read all the k first characters 
@@ -95,8 +144,8 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
         c = fr.next_char();
         counter = 0;
 
-        // for(int ii=0; ii<60; ii++){ // TEST
-        while(c != '\0'){ // \0 should be returned at the end of a sequence
+        for(int ii=0; ii<100; ii++){ // TEST
+        // while(c != '\0'){ // \0 should be returned at the end of a sequence
 
             // Get the next k-mer (rotate the string once leftwise, and replace last character)
             rotate(kmer_cur.begin(), kmer_cur.begin()+1, kmer_cur.end());
@@ -175,8 +224,7 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
     //} while (c != EOF)
 
     for (size_t i=0; i<q; i++){
-        cout << fifos[i].size() << " " ;
-        
+        cout << fifos[i].size() << " " ;        
         /*
         while(!fifos[i].empty()){
             cout << fifos[i].front() << endl;
@@ -184,11 +232,18 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
         }
         */
     }
+
+    Kmer kmer_ender(1, false);
+    for (size_t i=0; i<q; i++){
+        fifos[i].push(kmer_ender); // signifies the end of the file
+    }
+
+    for (auto &thr : thread_fifos){
+        thr.join();
+    }
+
     cout << endl;
-
-
 }
-
 
 // ------------------------------------------------------------
 
@@ -197,9 +252,17 @@ int main(){
 
     cout << "----------------------------------------" << endl;
 
-    run("/home/dylan/Documents/sequences/sars-cov-2.fasta", 129, 65, 5);
+    run("/home/dylan/Documents/sequences/sars-cov-2.fasta", 16, 6, 6);
 
     cout << "----------------------------------------" << endl;
+
+    /*
+    thread t1(fun1, '-');
+    thread t2(fun2, 'a', 'b');
+    
+    t1.join();
+    t2.join();
+    */
 
     return 0;
 }

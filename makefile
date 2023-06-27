@@ -12,7 +12,7 @@ LIBS :=
 
 CPP := g++
 OPTI ?= -O2
-CPPFLAGS := $(OPTI) -std=c++11 -Wall -Wextra -I $(INC_DIR)
+CPPFLAGS := $(OPTI) -std=c++11 -pthread -Wall -Wextra -I $(INC_DIR)
 
 CPP_FILES = $(shell find $(SRC_DIR) | grep '.cpp$$')
 HPP_FILES = $(shell find $(INC_DIR) | grep '.hpp$$')
