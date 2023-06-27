@@ -1,0 +1,3 @@
+[submodule "external/ntHash-AVX512"]
+	path = external/ntHash-AVX512
+	url = https://github.com/rchikhi/ntHash-AVX512.git

@@ -4,7 +4,6 @@
 #include <string>
 #include <fstream>
 #include <iostream>
-#include <sstream>
 
 class FastaReader{
   public:

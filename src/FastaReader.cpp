@@ -2,14 +2,13 @@
 
 FastaReader::FastaReader(std::string filename){
     this->fs.open(filename);
-    if (not this->fs.is_open()) {
+    if (! this->fs.is_open()) {
         std::cerr << "Impossible to open " << filename << std::endl;
         exit(1);
     }
 
     // Read the first header
     char c = '\0';
-    int i=0;
     while (c != '\n') {
         this->fs.get(c);
     }
@@ -28,7 +27,7 @@ char FastaReader::next_char() {
         if (! this->has_next())
             return '\0';
 
-        char c = '\0'; bool done = false;
+        char c = '\0'; 
         this->fs.get(c);
 
         switch (c) {
