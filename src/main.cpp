@@ -4,6 +4,7 @@
 #include <vector>
 #include <queue>
 #include <stdexcept>
+#include <thread>
 
 #include "/home/dylan/Documents/code/ntHash-AVX512-rs_avx/ntHashIterator.hpp"
 //#include "external/ntHash-AVX512/ntHashIterator.hpp"
@@ -242,6 +243,8 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
             c = fr.next_char();
             counter = (counter+1)%(k-m+1);
             new_skmer_flag = false;
+
+            // TODO : once read in the fifos, delete the super-k-mers ('new' allocations)
         }
     
     } while (false); // TEST ; for now we don't want to loop over the whole file
@@ -258,8 +261,6 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
         */
     }
     cout << endl;
-
-
 
 
 }
