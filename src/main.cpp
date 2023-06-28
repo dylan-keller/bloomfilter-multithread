@@ -6,13 +6,14 @@
 #include <queue>
 #include <stdexcept>
 #include <thread>
+#include <mutex>
 
 #include "/home/dylan/Documents/code/ntHash-AVX512-rs_avx/ntHashIterator.hpp"
 //#include "external/ntHash-AVX512/ntHashIterator.hpp"
 #include "FastaReader.hpp"
 #include "Kmer.hpp"
 
-#include<unistd.h>
+#include <unistd.h>
 
 using namespace std;
 
@@ -23,15 +24,15 @@ void threadfun(queue<Kmer>* fifo, int i){
     while(true){
         if(!fifo->empty()){
             if(fifo->front().len == 0){ // sent if fasta file is finished
-                cout << endl << "[thread " << i << " over]";
+                cout << "[thread " << i << " over]" << endl;
                 return;
             } else {
-                cout << endl << "(" << i << " " << fifo->front() << " " << i <<")";
+                cout << "(" << i << " " << fifo->front() << " " << i <<")" << endl;
                 //delete &fifo->front();
                 fifo->pop();
             }
         } else {
-            cout << i ;
+            //sleep(1);
         }
     }
 }
@@ -55,11 +56,11 @@ void fun2(char c1, char c2){
     cout << "[end thread2]";
 }
 
-// ------------------------------------------------------------
+// ------------------------------------------------------------ 
 
 void run(string filename, const size_t k, const size_t m, const size_t q){
 
-    // -------------------- Variables --------------------
+    // -------------------- Variables -------------------- 
 
     FastaReader fr(filename);
 
@@ -92,7 +93,7 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
     // Super-k-mer FIFOs (buckets)
     queue<Kmer> fifos[q];
         // NOTE : maybe make it queues of Kmer* instead ?
-
+    
     // Threads, each associated to a super-k-mer fifo
     vector<thread> thread_fifos;
 
@@ -102,10 +103,12 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
     // Last read char
     char c;
 
-    // -------------------- Program --------------------
+    // Used to know the queue in which to add the super-k-mer
+    size_t queue_nb;
+
+    // -------------------- Program -------------------- 
 
     for (size_t i=0; i<q; i++){
-        //thread_fifos.emplace_back(fun1, 'x');
         thread_fifos.emplace_back(threadfun, &fifos[i], i);
     }
 
@@ -167,6 +170,7 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
              * (1) the previous minimizer fell out of the k-sized window (if was the leftmost minimizer)
              * (2) the new m-mer (rightmost) is a better minimizer than the previous one
              * (3) the new m-mer (rightmost) is not better and we keep the previous one
+             * TODO : end of file case, we need to save the final super-k-mer
              */
 
             // Let's check if the prev minimizer is still part of the new k-mer.
@@ -207,7 +211,8 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
 
             if (new_skmer_flag){
                 // We need to add the super-k-mer to its correct queue.
-                fifos[hmin%q].push(*sk);
+                queue_nb = hmin%q;
+                fifos[queue_nb].push(*sk);
 
                 // We can now create the new super-k-mer, starting at the current k-mer.
                 sk = new Kmer(2*k-m, isRevComp, kmer_cur);
@@ -252,7 +257,7 @@ int main(){
 
     cout << "----------------------------------------" << endl;
 
-    run("/home/dylan/Documents/sequences/sars-cov-2.fasta", 16, 6, 6);
+    run("/home/dylan/Documents/sequences/sars-cov-2.fasta", 32, 18, 3);
 
     cout << "----------------------------------------" << endl;
 
