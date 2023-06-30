@@ -6,7 +6,7 @@
 #include <queue>
 #include <stdexcept>
 #include <thread>
-#include <mutex>
+#include <semaphore.h>
 
 #include "/home/dylan/Documents/code/ntHash-AVX512-rs_avx/ntHashIterator.hpp"
 //#include "external/ntHash-AVX512/ntHashIterator.hpp"
@@ -19,6 +19,10 @@ using namespace std;
 
 // ------------------------------------------------------------
 
+
+
+// ------------------------------------------------------------
+
 void threadfun(queue<Kmer>* fifo, int i){
     sleep(1+i);
     while(true){
@@ -28,32 +32,12 @@ void threadfun(queue<Kmer>* fifo, int i){
                 return;
             } else {
                 cout << "(" << i << " " << fifo->front() << " " << i <<")" << endl;
-                //delete &fifo->front();
                 fifo->pop();
             }
         } else {
             //sleep(1);
         }
     }
-}
-
-// ------------------------------------------------------------
-
-void fun1(char c){
-    for (int i=0; i<300; i++){
-        cout << c;
-    }
-    cout << "[end thread 1]";
-}
-
-void fun2(char c1, char c2){    
-    for (int i=0; i<100; i++){
-        cout << c1;
-    }
-    for (int i=0; i<100; i++){
-        cout << c2;
-    }
-    cout << "[end thread2]";
 }
 
 // ------------------------------------------------------------ 
@@ -215,15 +199,19 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
                 fifos[queue_nb].push(*sk);
 
                 // We can now create the new super-k-mer, starting at the current k-mer.
+                delete sk;
                 sk = new Kmer(2*k-m, isRevComp, kmer_cur);
             }
 
             c = fr.next_char();
             counter = (counter+1)%(k-m+1);
             new_skmer_flag = false;
-
-            // TODO : once read in the fifos, delete the super-k-mers ('new' allocations)
         }
+
+        // when the sequence (or file) is over, we need to send the final super-k-mer
+        queue_nb = hmin%q;
+        fifos[queue_nb].push(*sk);
+        delete sk;
     
     } while (false); // TEST ; for now we don't want to loop over the whole file
     //} while (c != EOF)

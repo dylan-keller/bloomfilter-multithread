@@ -22,22 +22,42 @@ std::ostream& operator<<(std::ostream& out, const Kmer& kmer) {
     char c;
     res.resize(kmer.len);
 
-    for(std::size_t i=0; i<kmer.len; i++){
-        switch((kmer.arr.at(i/32) >> (2*(i%32))) & 3UL) {
-            case 0:
-                c = 'A';
-                break;
-            case 1:
-                c = 'C';
-                break;
-            case 2:
-                c = 'T';
-                break;
-            case 3:
-                c = 'G';
-                break;
+    if (!kmer.isRevComp){
+        for(std::size_t i=0; i<kmer.len; i++){
+            switch((kmer.arr.at(i/32) >> (2*(i%32))) & 3UL) {
+                case 0:
+                    c = 'A';
+                    break;
+                case 1:
+                    c = 'C';
+                    break;
+                case 2:
+                    c = 'T';
+                    break;
+                case 3:
+                    c = 'G';
+                    break;
+            }
+            res[i] = c;
         }
-        res[i] = c;
+    } else {
+        for(std::size_t i=kmer.len; i>0; i--){
+            switch((kmer.arr.at((i-1)/32) >> (2*((i-1)%32))) & 3UL) {
+                case 0:
+                    c = 'T';
+                    break;
+                case 1:
+                    c = 'G';
+                    break;
+                case 2:
+                    c = 'A';
+                    break;
+                case 3:
+                    c = 'C';
+                    break;
+            }
+            res[kmer.len-i] = c;
+        }
     }
 
     out << res;
