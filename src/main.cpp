@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "/home/dylan/Documents/code/ntHash-AVX512-rs_avx/ntHashIterator.hpp"
+#include "/home/dylan/Documents/code/bloomfilter-multithread/external/bitmagic/src/bm.h"
 //#include "external/ntHash-AVX512/ntHashIterator.hpp"
 #include "FastaReader.hpp"
 #include "Kmer.hpp"
@@ -17,15 +18,33 @@ using namespace std;
 
 // ------------------------------------------------------------
 
+void visualizeBitVector(const bm::bvector<>& bv) {
+    for (bm::id_t i = 0; i < bv.size(); ++i) {
+        std::cout << (bv.test(i) ? "1" : "0");
+        
+        // Add line breaks for better readability
+        if ((i + 1) % 80 == 0) {
+            std::cout << std::endl;
+        }
+    }
+    
+    // Add a line break at the end if needed
+    if (bv.size() % 80 != 0) {
+        std::cout << std::endl;
+    }
+}
+
+// ------------------------------------------------------------
+
 void threadfun(queue<Kmer>* fifo, int i, sem_t* empty, sem_t* full){
     //this_thread::sleep_for(std::chrono::milliseconds(500*(i+1)));
     while(true){
         sem_wait(full);
         if(fifo->front().len == 0){ // sent if fasta file is finished
-            cout << "[thread " << i << " over]" << endl;
+            cout << "[thread " << i << " over]\n";
             return;
         } else {
-            cout << "(" << i << " " << fifo->front() << " " <<")" << endl;
+            cout << "(" << i << " " << fifo->front() << " " <<")\n";
             fifo->pop();
         }
         sem_post(empty);
