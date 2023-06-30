@@ -1,48 +1,40 @@
-#include <iostream>
-#include <bitset>
-#include <string>
-#include <vector>
 #include <algorithm>
+#include <chrono>
+#include <iostream>
 #include <queue>
-#include <stdexcept>
-#include <thread>
 #include <semaphore.h>
+#include <stdexcept>
+#include <string>
+#include <thread>
+#include <vector>
 
 #include "/home/dylan/Documents/code/ntHash-AVX512-rs_avx/ntHashIterator.hpp"
 //#include "external/ntHash-AVX512/ntHashIterator.hpp"
 #include "FastaReader.hpp"
 #include "Kmer.hpp"
 
-#include <unistd.h>
-
 using namespace std;
 
 // ------------------------------------------------------------
 
-
-
-// ------------------------------------------------------------
-
-void threadfun(queue<Kmer>* fifo, int i){
-    sleep(1+i);
+void threadfun(queue<Kmer>* fifo, int i, sem_t* empty, sem_t* full){
+    //this_thread::sleep_for(std::chrono::milliseconds(500*(i+1)));
     while(true){
-        if(!fifo->empty()){
-            if(fifo->front().len == 0){ // sent if fasta file is finished
-                cout << "[thread " << i << " over]" << endl;
-                return;
-            } else {
-                cout << "(" << i << " " << fifo->front() << " " << i <<")" << endl;
-                fifo->pop();
-            }
+        sem_wait(full);
+        if(fifo->front().len == 0){ // sent if fasta file is finished
+            cout << "[thread " << i << " over]" << endl;
+            return;
         } else {
-            //sleep(1);
+            cout << "(" << i << " " << fifo->front() << " " <<")" << endl;
+            fifo->pop();
         }
+        sem_post(empty);
     }
 }
 
 // ------------------------------------------------------------ 
 
-void run(string filename, const size_t k, const size_t m, const size_t q){
+void run(string filename, const size_t k, const size_t m, const size_t q, sem_t* emptys, sem_t* fulls){
 
     // -------------------- Variables -------------------- 
 
@@ -93,7 +85,7 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
     // -------------------- Program -------------------- 
 
     for (size_t i=0; i<q; i++){
-        thread_fifos.emplace_back(threadfun, &fifos[i], i);
+        thread_fifos.emplace_back(threadfun, &fifos[i], i, &emptys[i], &fulls[i]);
     }
 
     do {
@@ -196,7 +188,9 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
             if (new_skmer_flag){
                 // We need to add the super-k-mer to its correct queue.
                 queue_nb = hmin%q;
+                sem_wait(&emptys[queue_nb]);
                 fifos[queue_nb].push(*sk);
+                sem_post(&fulls[queue_nb]);
 
                 // We can now create the new super-k-mer, starting at the current k-mer.
                 delete sk;
@@ -209,26 +203,21 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
         }
 
         // when the sequence (or file) is over, we need to send the final super-k-mer
+        
         queue_nb = hmin%q;
+        sem_wait(&emptys[queue_nb]);
         fifos[queue_nb].push(*sk);
+        sem_post(&fulls[queue_nb]);
         delete sk;
     
     } while (false); // TEST ; for now we don't want to loop over the whole file
     //} while (c != EOF)
 
-    for (size_t i=0; i<q; i++){
-        cout << fifos[i].size() << " " ;        
-        /*
-        while(!fifos[i].empty()){
-            cout << fifos[i].front() << endl;
-            fifos[i].pop();
-        }
-        */
-    }
-
     Kmer kmer_ender(1, false);
     for (size_t i=0; i<q; i++){
+        sem_wait(&emptys[i]);
         fifos[i].push(kmer_ender); // signifies the end of the file
+        sem_post(&fulls[i]);
     }
 
     for (auto &thr : thread_fifos){
@@ -243,9 +232,18 @@ void run(string filename, const size_t k, const size_t m, const size_t q){
 int main(){
     cout << "hello, i do nothing for now\n";
 
+    size_t q = 3;
+
+    sem_t emptys[q];
+    sem_t fulls[q];
+    for(size_t i=0; i<q; i++){
+        sem_init(&(emptys[i]), 0, q);
+        sem_init(&(fulls[i]), 0, 0);
+    }
+
     cout << "----------------------------------------" << endl;
 
-    run("/home/dylan/Documents/sequences/sars-cov-2.fasta", 32, 18, 3);
+    run("/home/dylan/Documents/sequences/sars-cov-2.fasta", 32, 18, q, emptys, fulls);
 
     cout << "----------------------------------------" << endl;
 
@@ -256,6 +254,11 @@ int main(){
     t1.join();
     t2.join();
     */
+
+    for(size_t i=0; i<q; i++){
+        sem_destroy(&(emptys[i]));
+        sem_destroy(&(fulls[i]));
+    }
 
     return 0;
 }
