@@ -1,0 +1,211 @@
+#include "../include/SkmerExtractor.hpp"
+
+void extractSkmers(std::string filename, const std::size_t k, const std::size_t m,
+                const std::size_t q, const std::size_t fifo_size, Kmer* fifos,
+                sem_t* emptys, sem_t* fulls){
+
+    // ------------------------------ Variables ------------------------------ 
+
+    FastaReader fr(filename);
+
+    // Our k-sized window as we read the text, a.k.a. our "current" k-mer
+    std::string kmer_cur;
+    kmer_cur.resize(k);
+
+    // The forward (resp. reverse-strand) hash values of
+    // every m-mer in the k-mer, for quick minimizer find
+    //     reminder : a k-mer contains (k-m+1) m-mers = possible minimizers
+    uint64_t fhvalues[k-m+1];
+    uint64_t rhvalues[k-m+1];
+
+    // The forward (resp. reverse-strand) hash values
+    uint64_t fhVal=0, rhVal=0; 
+
+    // Tells us our kmer is reverse complement or not
+    bool isRevComp;
+
+    // The minimizer hash values :
+    uint64_t fhpos; // position (in the array) of the forward minimizer
+    uint64_t rhpos; // position (in the array) of the reverse-strand minimizer
+    uint64_t hpos;  // position (in the array) of the canonical minimizer
+    uint64_t fhmin; // hash value of the forward minimizer
+    uint64_t rhmin; // hash value of the reverse-strand minimizer 
+    uint64_t hmin;  // hash value of the canonical minimizer 
+
+    // Loop counter (used for our circular arrays fhvalues and rhvalues)
+    uint16_t counter;
+    
+    // Threads, each associated to a super-k-mer fifo
+    std::vector<std::thread> thread_fifos;
+
+    // Flag if the super-k-mer has ended and we need to create a new one
+    bool new_skmer_flag = false;
+
+    // Last read char
+    char c;
+
+    // Used to know the fifo in which to add the super-k-mer
+    std::size_t fifo_nb;
+
+    // Used to know where we are in our circular arrays
+    std::size_t fifo_counter[q];
+    for (std::size_t i=0; i<q; i++) fifo_counter[i]=0;
+
+    // ------------------------------ Program ------------------------------
+
+    do {
+        // To start, we need to read all the k first characters 
+        for (std::size_t i=0; i<k; i++){
+            kmer_cur[i] = fr.next_char();
+        }
+
+        // Let's compute the hash values of all m-mers in our first k-mer using ntHash
+        for (std::size_t i=0; i<k-m+1; i++){
+            NTC64(kmer_cur[i], kmer_cur[i+m], m, fhVal, rhVal);
+            fhvalues[i] = fhVal;
+            rhvalues[i] = rhVal;
+        }
+
+        // Among these m-mers, let's find the minimizer (our first minimizer)
+        fhpos = std::min_element(fhvalues, fhvalues+k-m+1) - fhvalues;
+        rhpos = std::min_element(rhvalues, rhvalues+k-m+1) - rhvalues;
+        fhmin = fhvalues[fhpos];
+        rhmin = rhvalues[rhpos];
+        
+        if (fhmin < rhmin){ 
+            hmin = fhmin;
+            hpos = fhpos;
+            isRevComp = false;
+        } else { // note : if they are equal, we arbitrarily pick the forward one
+            hmin = rhmin;
+            hpos = rhpos;
+            isRevComp = true;
+        } 
+
+        // We create the first super-k-mer with our current k-mer
+        Kmer* sk = new Kmer(2*k-m, isRevComp, kmer_cur);
+
+        // And we start reading the rest of the file
+        c = fr.next_char();
+
+        std::cout << "!a!" << std::endl; // REMOVEME
+
+        for(int ii=0; ii<200; ii++){ // TEST
+        std::cout << ii << std::endl; // REMOVEME
+        // while(c != '\0'){ // \0 should be returned at the end of a sequence
+
+            std::cout << fhvalues[counter] << std::endl;
+
+            // Get the next k-mer (rotate the std::string once leftwise, and replace last character)
+            rotate(kmer_cur.begin(), kmer_cur.begin()+1, kmer_cur.end());
+            kmer_cur[k-1] = c;
+
+            // Get the hash value of the new m-mer (rightmost)
+            NTC64(kmer_cur[k-m-1], kmer_cur[k-1], m, fhVal, rhVal);
+
+            std::cout << "!d!" << std::endl; // REMOVEME
+
+            // Place the new hash values in their respective arrays
+            // Thanks to 'counter', we can use the array as a circular array
+            fhvalues[counter] = fhVal;
+            rhvalues[counter] = rhVal;
+
+            std::cout << "!e!" << std::endl; // REMOVEME
+            std::cout << "!e!" << std::endl; // REMOVEME
+            
+            std::cout << "!e!" << std::endl; // REMOVEME
+
+            /*
+             * Now that we read a new character and therefore advanced the k-sized window,
+             * we have many things to check, to see if it's the end of the current super-k-mer or not.
+             * The possibilites are :
+             * 
+             * (1) the previous minimizer fell out of the k-sized window (if was the leftmost minimizer)
+             * (2) the new m-mer (rightmost) is a better minimizer than the previous one
+             * (3) the new m-mer (rightmost) is not better and we keep the previous one
+             * ((4)) we reached the end of the file
+             */
+
+            // Let's check if the prev minimizer is still part of the new k-mer.
+            if (counter != hpos){ // If it is,
+                // We need to check if the new m-mer (rightmost) is a better minimizer.
+                if (fhvalues[counter] < hmin) {
+                    hmin = fhvalues[counter];
+                    hpos = counter;
+                    isRevComp = false;
+                    new_skmer_flag = true;
+                } else if (rhvalues[counter] < hmin) {
+                    hmin = rhvalues[counter];
+                    hpos = counter;
+                    isRevComp = true;
+                    new_skmer_flag = true;
+                } else {
+                    sk->addNucl(c);
+                }
+            } 
+            else { // If the minimizer fell out of the window, we end the super-k-mer.
+                new_skmer_flag = true;
+
+                fhpos = std::min_element(fhvalues, fhvalues+k-m+1) - fhvalues;
+                rhpos = std::min_element(rhvalues, rhvalues+k-m+1) - rhvalues;
+                fhmin = fhvalues[fhpos];
+                rhmin = rhvalues[rhpos];
+
+                if (fhmin < rhmin){ 
+                    hmin = fhmin;
+                    hpos = fhpos;
+                    isRevComp = false;
+                } else { // note : if they are equal, we arbitrarily pick the forward one
+                    hmin = rhmin;
+                    hpos = rhpos;
+                    isRevComp = true;
+                } 
+            }
+
+            if (new_skmer_flag){
+                // We need to add the super-k-mer to its correct fifo.
+                fifo_nb = hmin%q;
+                // Wait for an empty spot i, the correct fifo
+                sem_wait(&emptys[fifo_nb]);
+                // add the super-k-mer in the correct spot
+                fifos[fifo_nb*fifo_size + fifo_counter[fifo_nb]] = *sk;
+                // update the counter
+                fifo_counter[fifo_nb] = (fifo_counter[fifo_nb]+1)%fifo_size;
+                // Notifies that a full spot has been added
+                sem_post(&fulls[fifo_nb]);
+
+                // We can now create the new super-k-mer, starting at the current k-mer.
+                delete sk;
+                sk = new Kmer(2*k-m, isRevComp, kmer_cur);
+            }
+
+            c = fr.next_char();
+            counter = (counter+1)%(k-m+1);
+            new_skmer_flag = false;
+        }
+
+        // when the sequence (or file) is over, we need to send the final super-k-mer
+        
+        fifo_nb = hmin%q;
+        sem_wait(&emptys[fifo_nb]);
+        fifos[fifo_nb*fifo_size + fifo_counter[fifo_nb]] = *sk;
+        fifo_counter[fifo_nb] = (fifo_counter[fifo_nb]+1)%fifo_size;
+        sem_post(&fulls[fifo_nb]);
+        delete sk;
+    
+    } while (false); // TEST ; for now we don't want to loop over the whole file
+    //} while (c != EOF)
+
+    Kmer kmer_ender(1, false);
+    for (std::size_t i=0; i<q; i++){
+        sem_wait(&emptys[i]);
+        fifos[fifo_nb*fifo_size + fifo_counter[fifo_nb]] = kmer_ender;
+        sem_post(&fulls[i]);
+    }
+
+    for (auto &thr : thread_fifos){
+        thr.join();
+    }
+
+    std::cout << std::endl;
+}

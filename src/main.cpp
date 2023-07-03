@@ -13,6 +13,7 @@
 //#include "external/ntHash-AVX512/ntHashIterator.hpp"
 #include "FastaReader.hpp"
 #include "Kmer.hpp"
+#include "SkmerExtractor.hpp"
 
 using namespace std;
 
@@ -251,7 +252,14 @@ void run(string filename, const size_t k, const size_t m, const size_t q, sem_t*
 int main(){
     cout << "hello, i do nothing for now\n";
 
+    cout << "----------------------------------------" << endl;
+
+    size_t k = 32;
+    size_t m = 18;
     size_t q = 3;
+    size_t fifo_size = 100;
+
+    Kmer* fifos = (Kmer*)malloc(q * fifo_size * sizeof(Kmer(2*k-m, false)));
 
     sem_t emptys[q];
     sem_t fulls[q];
@@ -260,9 +268,14 @@ int main(){
         sem_init(&(fulls[i]), 0, 0);
     }
 
+    // NOTE : these objects have the same size (might be worth noting for cache uses)
+    // Kmer k1(10,false);
+    // Kmer k2(1000,false);
+    // cout << sizeof(k1) << " " << sizeof(k2) << endl;
+
     cout << "----------------------------------------" << endl;
 
-    run("/home/dylan/Documents/sequences/sars-cov-2.fasta", 32, 18, q, emptys, fulls);
+    extractSkmers("/home/dylan/Documents/sequences/sars-cov-2.fasta", k, m, q, fifo_size, fifos, emptys, fulls);
 
     cout << "----------------------------------------" << endl;
 
@@ -278,6 +291,8 @@ int main(){
         sem_destroy(&(emptys[i]));
         sem_destroy(&(fulls[i]));
     }
+
+    free(fifos);
 
     return 0;
 }
