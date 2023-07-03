@@ -173,7 +173,7 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
             counter = (counter+1)%(k-m+1);
             new_skmer_flag = false;
 
-       }
+        }
 
         // when the sequence (or file) is over, we need to send the final super-k-mer
         
@@ -187,8 +187,8 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         // Since we used "new" for the super-k-mer pointer, we delete it
         delete sk;
     
-    } while (false); // TEST ; for now we don't want to loop over the whole file
-    //} while (c != EOF)
+    //} while (false); // TEST ; for now we don't want to loop over the whole file
+    } while (fr.has_next());
 
     Kmer kmer_ender(1, false);
     for (std::size_t i=0; i<q; i++){

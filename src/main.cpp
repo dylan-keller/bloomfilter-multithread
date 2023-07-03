@@ -61,10 +61,9 @@ int main(){
 
     size_t k = 32;
     size_t m = 18;
-    size_t q = 3;
-    size_t fifo_size = 100;
+    size_t q = 10;
+    size_t fifo_size = 1000;
 
-    //Kmer* fifos = (Kmer*)malloc(q * fifo_size * sizeof(Kmer(2*k-m, false)));
     Kmer* fifos[q*fifo_size];
 
     sem_t emptys[q];
@@ -81,7 +80,8 @@ int main(){
 
     cout << "----------------------------------------" << endl;
 
-    extractSkmers("/home/dylan/Documents/sequences/sars-cov-2.fasta", k, m, q, fifo_size, fifos, emptys, fulls);
+    extractSkmers("/home/dylan/Documents/sequences/sars-cov-2.fasta", 
+                  k, m, q, fifo_size, fifos, emptys, fulls);
 
     cout << "----------------------------------------" << endl;
 
@@ -97,8 +97,6 @@ int main(){
         sem_destroy(&(emptys[i]));
         sem_destroy(&(fulls[i]));
     }
-
-    //free(fifos);
 
     return 0;
 }
