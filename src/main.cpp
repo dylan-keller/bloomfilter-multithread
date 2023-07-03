@@ -63,7 +63,7 @@ int main(){
     size_t k = 32;
     size_t m = 18;
     size_t q = 10;
-    size_t fifo_size = 1000;
+    size_t fifo_size = 100;
 
     Kmer* fifos[q*fifo_size];
 
@@ -73,6 +73,10 @@ int main(){
         sem_init(&(emptys[i]), 0, fifo_size);
         sem_init(&(fulls[i]), 0, 0);
     }
+
+    Kmer* testing = new Kmer(12, false, "AAACCCTTTGGG");
+    fifos[0] = testing;
+    cout << *fifos[0] << endl;
 
     // NOTE : these objects have the same size (might be worth noting for cache uses)
     // Kmer k1(10,false);
@@ -85,10 +89,6 @@ int main(){
                   k, m, q, fifo_size, fifos, emptys, fulls);
 
     cout << "----------------------------------------" << endl;
-
-    Kmer* testing = new Kmer(12, false, "AAACCCTTTGGG");
-    fifos[0] = testing;
-    cout << *fifos[0] << endl;
 
     //splitIntoFile("../testing.txt", k, m, fifo_size, fifos, &emptys[0], &fulls[0]);
 

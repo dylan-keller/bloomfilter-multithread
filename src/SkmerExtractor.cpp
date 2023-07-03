@@ -174,7 +174,8 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
                 std::cout<<"!G!"<<std::endl;
                 sk = new Kmer(2*k-m, isRevComp, kmer_cur);
                 std::cout<<"!H!"<<std::endl;
-                std::cout<<"f0:"<<*fifos[0]<<std::endl;
+                if(fifo_nb==0)
+                    std::cout<<"f0:"<<*fifos[0]<<std::endl;
                 std::cout<<"!I!"<<std::endl;
             }
 
