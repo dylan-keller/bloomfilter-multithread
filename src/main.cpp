@@ -14,6 +14,7 @@
 #include "FastaReader.hpp"
 #include "Kmer.hpp"
 #include "SkmerExtractor.hpp"
+#include "SkmerSplitter.hpp"
 
 using namespace std;
 
@@ -84,6 +85,18 @@ int main(){
                   k, m, q, fifo_size, fifos, emptys, fulls);
 
     cout << "----------------------------------------" << endl;
+
+    Kmer* testing = new Kmer(12, false, "AAACCCTTTGGG");
+    fifos[0] = testing;
+    cout << *fifos[0] << endl;
+
+    //splitIntoFile("../testing.txt", k, m, fifo_size, fifos, &emptys[0], &fulls[0]);
+
+    delete testing;
+
+    cout << "----------------------------------------" << endl;
+
+    std::cout<<"!d!"<<std::endl;
 
     /*
     thread t1(fun1, '-');

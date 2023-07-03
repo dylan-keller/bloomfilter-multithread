@@ -89,8 +89,10 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         c = fr.next_char();
         counter = 0;
 
-        //for(int ii=0; ii<200; ii++){ // TEST
-        while(c != '\0'){ // \0 should be returned at the end of a sequence
+        for(int ii=0; ii<200; ii++){ // TEST
+        //while(c != '\0'){ // \0 should be returned at the end of a sequence
+
+            std::cout<<"!A!"<<std::endl;
 
             // Get the next k-mer (rotate the std::string once leftwise, and replace last character)
             rotate(kmer_cur.begin(), kmer_cur.begin()+1, kmer_cur.end());
@@ -151,22 +153,29 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
                 } 
             }
 
-
             if (new_skmer_flag){
                 // We need to add the super-k-mer to its correct fifo.
+                std::cout<<"!B!"<<std::endl;
                 fifo_nb = hmin%q;
                 // Wait for an empty spot i, the correct fifo
+                std::cout<<"!C!"<<std::endl;
                 sem_wait(&emptys[fifo_nb]);
                 // add the super-k-mer in the correct spot
+                std::cout<<"!D!"<<std::endl;
                 fifos[fifo_nb*fifo_size + fifo_counter[fifo_nb]] = sk;
                 // update the counter
+                std::cout<<"!E!"<<std::endl;
                 fifo_counter[fifo_nb] = (fifo_counter[fifo_nb]+1)%fifo_size;
-                // Notifies that a full spot has been added
+                // Notifies that a spot has just been filled
                 sem_post(&fulls[fifo_nb]);
-
+                std::cout<<"!F!"<<std::endl;
                 // We can now create the new super-k-mer, starting at the current k-mer.
                 delete sk;
+                std::cout<<"!G!"<<std::endl;
                 sk = new Kmer(2*k-m, isRevComp, kmer_cur);
+                std::cout<<"!H!"<<std::endl;
+                std::cout<<"f0:"<<*fifos[0]<<std::endl;
+                std::cout<<"!I!"<<std::endl;
             }
 
             c = fr.next_char();

@@ -2,7 +2,7 @@
 #define SKMEREXTRACTOR_HPP
 
 #include <algorithm>
-#include <queue>
+#include <iostream>
 #include <string>
 #include <semaphore.h>
 #include <thread>
