@@ -1,7 +1,7 @@
 #include "../include/SkmerExtractor.hpp"
 
 void extractSkmers(std::string filename, const std::size_t k, const std::size_t m,
-                const std::size_t q, const std::size_t fifo_size, Kmer* fifos,
+                const std::size_t q, const std::size_t fifo_size, Kmer** fifos,
                 sem_t* emptys, sem_t* fulls){
 
     // ------------------------------ Variables ------------------------------ 
@@ -87,14 +87,10 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
 
         // And we start reading the rest of the file
         c = fr.next_char();
+        counter = 0;
 
-        std::cout << "!a!" << std::endl; // REMOVEME
-
-        for(int ii=0; ii<200; ii++){ // TEST
-        std::cout << ii << std::endl; // REMOVEME
-        // while(c != '\0'){ // \0 should be returned at the end of a sequence
-
-            std::cout << fhvalues[counter] << std::endl;
+        //for(int ii=0; ii<200; ii++){ // TEST
+        while(c != '\0'){ // \0 should be returned at the end of a sequence
 
             // Get the next k-mer (rotate the std::string once leftwise, and replace last character)
             rotate(kmer_cur.begin(), kmer_cur.begin()+1, kmer_cur.end());
@@ -103,17 +99,10 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
             // Get the hash value of the new m-mer (rightmost)
             NTC64(kmer_cur[k-m-1], kmer_cur[k-1], m, fhVal, rhVal);
 
-            std::cout << "!d!" << std::endl; // REMOVEME
-
             // Place the new hash values in their respective arrays
             // Thanks to 'counter', we can use the array as a circular array
             fhvalues[counter] = fhVal;
             rhvalues[counter] = rhVal;
-
-            std::cout << "!e!" << std::endl; // REMOVEME
-            std::cout << "!e!" << std::endl; // REMOVEME
-            
-            std::cout << "!e!" << std::endl; // REMOVEME
 
             /*
              * Now that we read a new character and therefore advanced the k-sized window,
@@ -162,13 +151,14 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
                 } 
             }
 
+
             if (new_skmer_flag){
                 // We need to add the super-k-mer to its correct fifo.
                 fifo_nb = hmin%q;
                 // Wait for an empty spot i, the correct fifo
                 sem_wait(&emptys[fifo_nb]);
                 // add the super-k-mer in the correct spot
-                fifos[fifo_nb*fifo_size + fifo_counter[fifo_nb]] = *sk;
+                fifos[fifo_nb*fifo_size + fifo_counter[fifo_nb]] = sk;
                 // update the counter
                 fifo_counter[fifo_nb] = (fifo_counter[fifo_nb]+1)%fifo_size;
                 // Notifies that a full spot has been added
@@ -182,15 +172,19 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
             c = fr.next_char();
             counter = (counter+1)%(k-m+1);
             new_skmer_flag = false;
-        }
+
+       }
 
         // when the sequence (or file) is over, we need to send the final super-k-mer
         
+        // cf. lines just above if clarification needed ("if(new_skmer_flag)...")
         fifo_nb = hmin%q;
         sem_wait(&emptys[fifo_nb]);
-        fifos[fifo_nb*fifo_size + fifo_counter[fifo_nb]] = *sk;
+        fifos[fifo_nb*fifo_size + fifo_counter[fifo_nb]] = sk;
         fifo_counter[fifo_nb] = (fifo_counter[fifo_nb]+1)%fifo_size;
         sem_post(&fulls[fifo_nb]);
+
+        // Since we used "new" for the super-k-mer pointer, we delete it
         delete sk;
     
     } while (false); // TEST ; for now we don't want to loop over the whole file
@@ -199,13 +193,7 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
     Kmer kmer_ender(1, false);
     for (std::size_t i=0; i<q; i++){
         sem_wait(&emptys[i]);
-        fifos[fifo_nb*fifo_size + fifo_counter[fifo_nb]] = kmer_ender;
+        fifos[fifo_nb*fifo_size + fifo_counter[fifo_nb]] = &kmer_ender;
         sem_post(&fulls[i]);
     }
-
-    for (auto &thr : thread_fifos){
-        thr.join();
-    }
-
-    std::cout << std::endl;
 }
