@@ -56,10 +56,15 @@ public:
 };
 */
 
-void splitIntoFile(std::string outfile, const std::size_t k, const std::size_t m, 
-                 const std::size_t fifo_size, Kmer **fifo,
+void splitIntoFile(std::string outfile, std::size_t id, const std::size_t k,
+                 const std::size_t m, const std::size_t fifo_size, Kmer **fifo,
                  sem_t *empty, sem_t *full) 
 {
+
+	std::this_thread::sleep_for(std::chrono::milliseconds(400*(id+1)));
+
+	outfile[outfile.length()-5] = std::to_string(id)[0];
+
     std::ofstream outf(outfile);
 
     outf << "bonjour" << "\n";
@@ -67,25 +72,22 @@ void splitIntoFile(std::string outfile, const std::size_t k, const std::size_t m
     std::size_t fifo_counter = 0;
     Kmer* sk = new Kmer(2*k-m, false);
 
-    std::cout<<"!0!"<<std::endl;
-    std::cout<<*fifo[0]<<std::endl;
-    sk = fifo[0];
-    std::cout<<*sk<<std::endl;
+    std::cout << "[thread " << id << " start]" << std::endl;
 
     while(true){
+		std::this_thread::sleep_for(std::chrono::milliseconds(400*(id+1)));
         sem_wait(full);
 
-        std::cout<<"!a!"<<std::endl;
+		ssize_t truc = id*fifo_size + fifo_counter;
 
-        sk = fifo[fifo_counter];
+        sk = fifo[truc];
         fifo_counter = (fifo_counter+1)%fifo_size;
 
-        std::cout<<*sk<<std::endl;
-        std::cout<<"!b!"<<std::endl;
+		std::cout << "thread " << id << " in " << (truc) << " recieved " << *sk << std::endl;
 
         if((*sk).len == 0){ // sent if fasta file is finished
             std::cout<<"!c!"<<std::endl;
-            std::cout << "[thread over]\n";
+            std::cout << "[thread " << id << " over]\n";
             outf.close();
             delete sk;
             return;

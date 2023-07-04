@@ -4,6 +4,8 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
                 const std::size_t q, const std::size_t fifo_size, Kmer** fifos,
                 sem_t* emptys, sem_t* fulls){
 
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+
     // ------------------------------ Variables ------------------------------ 
 
     FastaReader fr(filename);
@@ -89,10 +91,10 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         c = fr.next_char();
         counter = 0;
 
-        for(int ii=0; ii<200; ii++){ // TEST
+        for(int ii=0; ii<100; ii++){ // TEST
         //while(c != '\0'){ // \0 should be returned at the end of a sequence
 
-            std::cout<<"!A!"<<std::endl;
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
             // Get the next k-mer (rotate the std::string once leftwise, and replace last character)
             rotate(kmer_cur.begin(), kmer_cur.begin()+1, kmer_cur.end());
@@ -155,28 +157,20 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
 
             if (new_skmer_flag){
                 // We need to add the super-k-mer to its correct fifo.
-                std::cout<<"!B!"<<std::endl;
                 fifo_nb = hmin%q;
                 // Wait for an empty spot i, the correct fifo
-                std::cout<<"!C!"<<std::endl;
                 sem_wait(&emptys[fifo_nb]);
                 // add the super-k-mer in the correct spot
-                std::cout<<"!D!"<<std::endl;
-                fifos[fifo_nb*fifo_size + fifo_counter[fifo_nb]] = sk;
+                ssize_t truc = fifo_nb*fifo_size + fifo_counter[fifo_nb];
+                std::cout << "put to " << fifo_nb << " in " << truc << ": " << *sk << std::endl;
+                fifos[truc] = sk;
                 // update the counter
-                std::cout<<"!E!"<<std::endl;
                 fifo_counter[fifo_nb] = (fifo_counter[fifo_nb]+1)%fifo_size;
                 // Notifies that a spot has just been filled
                 sem_post(&fulls[fifo_nb]);
-                std::cout<<"!F!"<<std::endl;
                 // We can now create the new super-k-mer, starting at the current k-mer.
                 delete sk;
-                std::cout<<"!G!"<<std::endl;
                 sk = new Kmer(2*k-m, isRevComp, kmer_cur);
-                std::cout<<"!H!"<<std::endl;
-                if(fifo_nb==0)
-                    std::cout<<"f0:"<<*fifos[0]<<std::endl;
-                std::cout<<"!I!"<<std::endl;
             }
 
             c = fr.next_char();
@@ -197,11 +191,14 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         // Since we used "new" for the super-k-mer pointer, we delete it
         delete sk;
     
-    //} while (false); // TEST ; for now we don't want to loop over the whole file
-    } while (fr.has_next());
+    } while (false); // TEST ; for now we don't want to loop over the whole file
+    //} while (fr.has_next());
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 
     Kmer kmer_ender(1, false);
     for (std::size_t i=0; i<q; i++){
+        std::cout << "sending kill signal to " << i << std::endl;
         sem_wait(&emptys[i]);
         fifos[fifo_nb*fifo_size + fifo_counter[fifo_nb]] = &kmer_ender;
         sem_post(&fulls[i]);

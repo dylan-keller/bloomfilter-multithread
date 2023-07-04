@@ -60,10 +60,11 @@ int main(){
 
     cout << "----------------------------------------" << endl;
 
-    size_t k = 32;
-    size_t m = 18;
-    size_t q = 10;
-    size_t fifo_size = 100;
+    const size_t k = 12;
+    const size_t m = 6;
+    const size_t q = 3;
+    const size_t fifo_size = 10;
+    ssize_t id = -1;
 
     Kmer* fifos[q*fifo_size];
 
@@ -74,10 +75,6 @@ int main(){
         sem_init(&(fulls[i]), 0, 0);
     }
 
-    Kmer* testing = new Kmer(12, false, "AAACCCTTTGGG");
-    fifos[0] = testing;
-    cout << *fifos[0] << endl;
-
     // NOTE : these objects have the same size (might be worth noting for cache uses)
     // Kmer k1(10,false);
     // Kmer k2(1000,false);
@@ -85,14 +82,22 @@ int main(){
 
     cout << "----------------------------------------" << endl;
 
-    extractSkmers("/home/dylan/Documents/sequences/sars-cov-2.fasta", 
-                  k, m, q, fifo_size, fifos, emptys, fulls);
+    //extractSkmers("/home/dylan/Documents/sequences/sars-cov-2.fasta", 
+    //              k, m, q, fifo_size, fifos, emptys, fulls);
 
-    cout << "----------------------------------------" << endl;
+    //splitIntoFile("../testing.txt", 0, k, m, fifo_size, fifos, &emptys[0], &fulls[0]);
 
-    //splitIntoFile("../testing.txt", k, m, fifo_size, fifos, &emptys[0], &fulls[0]);
+    thread t1(extractSkmers, "/home/dylan/Documents/sequences/sars-cov-2.fasta",
+            k, m, q, fifo_size, fifos, emptys, fulls);
 
-    delete testing;
+    thread extractor_threads[q];
+
+    for(size_t i=0; i<q; i++){
+        extractor_threads[i] = thread(splitIntoFile, "../testing/testingX.txt", i, k, m,
+                                      fifo_size, fifos, &emptys[i], &fulls[i]);
+    }
+
+    t1.join();
 
     cout << "----------------------------------------" << endl;
 
