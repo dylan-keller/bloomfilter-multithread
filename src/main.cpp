@@ -62,8 +62,8 @@ int main(){
 
     const size_t k = 12;
     const size_t m = 6;
-    const size_t q = 3;
-    const size_t fifo_size = 100;
+    const size_t q = 10;
+    const size_t fifo_size = 10;
     ssize_t id = -1;
 
     Kmer* fifos[q*fifo_size];
@@ -94,7 +94,7 @@ int main(){
 
     for(size_t i=0; i<q; i++){
         extractor_threads[i] = thread(splitIntoFile, "../testing/testingX.txt", i, k, m,
-                                      fifo_size, fifos, &emptys[i], &fulls[i]);
+                                      fifo_size, fifos, true, &emptys[i], &fulls[i]);
     }
 
     t1.join();
@@ -105,23 +105,12 @@ int main(){
 
     cout << "----------------------------------------" << endl;
 
-    std::cout<<"!d!"<<std::endl;
-
-    /*
-    thread t1(fun1, '-');
-    thread t2(fun2, 'a', 'b');
-    
-    t1.join();
-    t2.join();
-    */
-
     for(size_t i=0; i<q; i++){
         sem_destroy(&(emptys[i]));
         sem_destroy(&(fulls[i]));
     }
 
-    std::cout << "sleep 5 sec, main" << std::endl;
-    std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+    std::cout << "[------------]\n[- all done -]\n[------------]" << std::endl;
 
     return 0;
 }

@@ -3,9 +3,7 @@
 void extractSkmers(std::string filename, const std::size_t k, const std::size_t m,
                 const std::size_t q, const std::size_t fifo_size, Kmer** fifos,
                 sem_t* emptys, sem_t* fulls){
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
+    
     // ------------------------------ Variables ------------------------------ 
 
     FastaReader fr(filename);
@@ -91,10 +89,8 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         c = fr.next_char();
         counter = 0;
 
-        for(int ii=0; ii<100; ii++){ // TEST
-        //while(c != '\0'){ // \0 should be returned at the end of a sequence
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(40));
+        //for(int ii=0; ii<100; ii++){ // TEST
+        while(c != '\0'){ // \0 should be returned at the end of a sequence
 
             // Get the next k-mer (rotate the std::string once leftwise, and replace last character)
             rotate(kmer_cur.begin(), kmer_cur.begin()+1, kmer_cur.end());
@@ -193,9 +189,7 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
     } while (false); // TEST ; for now we don't want to loop over the whole file
     //} while (fr.has_next());
 
-    std::cout << "(((extractor done, waiting 8 secs)))" << std::endl;
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(8000));
+    std::cout << "(((extractor done)))" << std::endl;
 
     Kmer kmer_ender(1, false);
     for (std::size_t i=0; i<q; i++){
@@ -205,7 +199,5 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         sem_post(&fulls[i]);
     }
 
-    std::cout << "sleep 5 sec, extractor" << std::endl;
-    std::this_thread::sleep_for(std::chrono::milliseconds(5000));
     std::cout << "[extractor thread over]" << std::endl;
 }

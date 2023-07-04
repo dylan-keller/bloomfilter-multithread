@@ -58,12 +58,8 @@ public:
 
 void splitIntoFile(std::string outfile, std::size_t id, const std::size_t k,
                  const std::size_t m, const std::size_t fifo_size, Kmer **fifo,
-                 sem_t *empty, sem_t *full) 
+                 bool split_skmer_into_kmers, sem_t *empty, sem_t *full) 
 {
-	int *el_in_fifo = new int(32);
-
-	std::this_thread::sleep_for(std::chrono::milliseconds(200*(id+1)));
-
 	outfile[outfile.length()-5] = std::to_string(id)[0];
 
     std::ofstream outf(outfile);
@@ -71,12 +67,12 @@ void splitIntoFile(std::string outfile, std::size_t id, const std::size_t k,
     outf << "bonjour" << "\n";
     
     std::size_t fifo_counter = 0;
-    Kmer* sk = new Kmer(2*k-m, false);
+    Kmer* sk;
 
     std::cout << "[thread " << id << " start]" << std::endl;
 
     while(true){
-		std::this_thread::sleep_for(std::chrono::milliseconds(400*(id+1)));
+		//std::this_thread::sleep_for(std::chrono::milliseconds(400*(id+1)));
         sem_wait(full);
 
 		ssize_t truc = id*fifo_size + fifo_counter;
@@ -86,17 +82,15 @@ void splitIntoFile(std::string outfile, std::size_t id, const std::size_t k,
 
         if((*sk).len == 0){ // sent if fasta file is finished
             std::cout << "[thread " << id << " over]\n";
+			outf << "au revoir" << "\n";
             outf.close();
-			delete el_in_fifo;
             // delete sk;
             return;
         } else {
 			std::cout << "thread " << id << " in " << (truc) << " recieved " << *sk << std::endl;
-            outf << sk << "\n";
+            outf << *sk << "\n";
 			delete sk;
         }
         sem_post(empty);
-
-		sem_getvalue(full, el_in_fifo);
     }
 }
