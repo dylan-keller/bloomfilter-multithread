@@ -60,7 +60,9 @@ void splitIntoFile(std::string outfile, std::size_t id, const std::size_t k,
                  const std::size_t m, const std::size_t fifo_size, Kmer **fifo,
                  bool split_skmer_into_kmers, sem_t *empty, sem_t *full) 
 {
-	outfile[outfile.length()-5] = std::to_string(id)[0];
+	if(outfile[outfile.length()-1] != '/')
+		outfile += '/';
+	outfile = outfile + std::to_string(id) + ".txt";
 
     std::ofstream outf(outfile);
 
@@ -87,7 +89,7 @@ void splitIntoFile(std::string outfile, std::size_t id, const std::size_t k,
             delete sk;
             return;
         } else {
-			std::cout << "thread " << id << " in " << (truc) << " recieved " << *sk << std::endl;
+			//std::cout << "thread " << id << " in " << (truc) << " recieved " << *sk << std::endl;
             outf << *sk << "\n";
 			delete sk;
         }

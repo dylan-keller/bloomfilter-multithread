@@ -158,7 +158,7 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
                 sem_wait(&emptys[fifo_nb]);
                 // add the super-k-mer in the correct spot
                 ssize_t truc = fifo_nb*fifo_size + fifo_counter[fifo_nb];
-                std::cout << "put to " << fifo_nb << " in " << truc << ": " << *sk << std::endl;
+                //std::cout << "put to " << fifo_nb << " in " << truc << ": " << *sk << std::endl;
                 fifos[truc] = sk;
                 // update the counter
                 fifo_counter[fifo_nb] = (fifo_counter[fifo_nb]+1)%fifo_size;
@@ -181,7 +181,7 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         fifo_nb = hmin%q;
         sem_wait(&emptys[fifo_nb]);
         ssize_t truc = fifo_nb*fifo_size + fifo_counter[fifo_nb];
-        std::cout << "put to " << fifo_nb << " in " << truc << ": " << *sk << std::endl;
+        //std::cout << "put to " << fifo_nb << " in " << truc << ": " << *sk << std::endl;
         fifos[truc] = sk;
         fifo_counter[fifo_nb] = (fifo_counter[fifo_nb]+1)%fifo_size;
         sem_post(&fulls[fifo_nb]);
@@ -193,7 +193,7 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
 
     for (std::size_t i=0; i<q; i++){
         Kmer* kmer_ender = new Kmer(1, false);
-        std::cout << "sending kill signal to " << i << std::endl;
+        //std::cout << "sending kill signal to " << i << std::endl;
         sem_wait(&emptys[i]);
         fifos[i*fifo_size + fifo_counter[i]] = kmer_ender;
         sem_post(&fulls[i]);

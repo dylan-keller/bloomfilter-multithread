@@ -62,7 +62,7 @@ int main(){
 
     const size_t k = 80;
     const size_t m = 35;
-    const size_t q = 10;
+    const size_t q = 20;
     const size_t fifo_size = 1000;
     ssize_t id = -1;
 
@@ -80,26 +80,17 @@ int main(){
     // Kmer k2(1000,false);
     // cout << sizeof(k1) << " " << sizeof(k2) << endl;
 
-    cout << "----------------------------------------" << endl;
-
-    //extractSkmers("/home/dylan/Documents/sequences/sars-cov-2.fasta", 
-    //              k, m, q, fifo_size, fifos, emptys, fulls);
-
-    //splitIntoFile("../testing.txt", 0, k, m, fifo_size, fifos, &emptys[0], &fulls[0]);
-
     thread t1(extractSkmers, "/home/dylan/Documents/sequences/sars-cov-2.fasta",
             k, m, q, fifo_size, fifos, emptys, fulls);
 
     thread splitter_threads[q];
 
     for(size_t i=0; i<q; i++){
-        splitter_threads[i] = thread(splitIntoFile, "../testing/testingX.txt", i, k, m,
+        splitter_threads[i] = thread(splitIntoFile, "../testing/", i, k, m,
                                       fifo_size, fifos, true, &emptys[i], &fulls[i]);
     }
 
     t1.join();
-
-
 
     for(size_t i=0; i<q; i++){
         splitter_threads[i].join();
@@ -111,8 +102,7 @@ int main(){
         sem_destroy(&(emptys[i]));
         sem_destroy(&(fulls[i]));
     }
-
-    std::cout << "[------------]\n[- all done -]\n[------------]" << std::endl;
+    std::cout << "\n--------------- all done ---------------" << std::endl;
 
     return 0;
 }
