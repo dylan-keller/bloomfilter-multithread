@@ -84,7 +84,7 @@ void splitIntoFile(std::string outfile, std::size_t id, const std::size_t k,
             std::cout << "[thread " << id << " over]\n";
 			outf << "au revoir" << "\n";
             outf.close();
-            // delete sk;
+            delete sk;
             return;
         } else {
 			std::cout << "thread " << id << " in " << (truc) << " recieved " << *sk << std::endl;

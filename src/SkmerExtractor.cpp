@@ -191,11 +191,11 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
 
     std::cout << "(((extractor done)))" << std::endl;
 
-    Kmer kmer_ender(1, false);
     for (std::size_t i=0; i<q; i++){
+        Kmer* kmer_ender = new Kmer(1, false);
         std::cout << "sending kill signal to " << i << std::endl;
         sem_wait(&emptys[i]);
-        fifos[i*fifo_size + fifo_counter[i]] = &kmer_ender;
+        fifos[i*fifo_size + fifo_counter[i]] = kmer_ender;
         sem_post(&fulls[i]);
     }
 

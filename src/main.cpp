@@ -60,10 +60,10 @@ int main(){
 
     cout << "----------------------------------------" << endl;
 
-    const size_t k = 12;
-    const size_t m = 6;
+    const size_t k = 80;
+    const size_t m = 35;
     const size_t q = 10;
-    const size_t fifo_size = 10;
+    const size_t fifo_size = 1000;
     ssize_t id = -1;
 
     Kmer* fifos[q*fifo_size];
@@ -90,17 +90,19 @@ int main(){
     thread t1(extractSkmers, "/home/dylan/Documents/sequences/sars-cov-2.fasta",
             k, m, q, fifo_size, fifos, emptys, fulls);
 
-    thread extractor_threads[q];
+    thread splitter_threads[q];
 
     for(size_t i=0; i<q; i++){
-        extractor_threads[i] = thread(splitIntoFile, "../testing/testingX.txt", i, k, m,
+        splitter_threads[i] = thread(splitIntoFile, "../testing/testingX.txt", i, k, m,
                                       fifo_size, fifos, true, &emptys[i], &fulls[i]);
     }
 
     t1.join();
 
+
+
     for(size_t i=0; i<q; i++){
-        extractor_threads[i].join();
+        splitter_threads[i].join();
     }
 
     cout << "----------------------------------------" << endl;
