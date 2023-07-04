@@ -184,26 +184,28 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         // cf. lines just above if clarification needed ("if(new_skmer_flag)...")
         fifo_nb = hmin%q;
         sem_wait(&emptys[fifo_nb]);
-        fifos[fifo_nb*fifo_size + fifo_counter[fifo_nb]] = sk;
+        ssize_t truc = fifo_nb*fifo_size + fifo_counter[fifo_nb];
+        std::cout << "put to " << fifo_nb << " in " << truc << ": " << *sk << std::endl;
+        fifos[truc] = sk;
         fifo_counter[fifo_nb] = (fifo_counter[fifo_nb]+1)%fifo_size;
         sem_post(&fulls[fifo_nb]);
     
     } while (false); // TEST ; for now we don't want to loop over the whole file
     //} while (fr.has_next());
 
-    std::cout << "(((extractor done, waiting 10 secs)))" << std::endl;
+    std::cout << "(((extractor done, waiting 8 secs)))" << std::endl;
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(8000));
 
     Kmer kmer_ender(1, false);
     for (std::size_t i=0; i<q; i++){
         std::cout << "sending kill signal to " << i << std::endl;
         sem_wait(&emptys[i]);
-        fifos[fifo_nb*fifo_size + fifo_counter[fifo_nb]] = &kmer_ender;
+        fifos[i*fifo_size + fifo_counter[i]] = &kmer_ender;
         sem_post(&fulls[i]);
     }
 
-    std::cout << "sleep 5 sec" << std::endl;
+    std::cout << "sleep 5 sec, extractor" << std::endl;
     std::this_thread::sleep_for(std::chrono::milliseconds(5000));
     std::cout << "[extractor thread over]" << std::endl;
 }

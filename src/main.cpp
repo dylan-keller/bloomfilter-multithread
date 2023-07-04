@@ -99,6 +99,10 @@ int main(){
 
     t1.join();
 
+    for(size_t i=0; i<q; i++){
+        extractor_threads[i].join();
+    }
+
     cout << "----------------------------------------" << endl;
 
     std::cout<<"!d!"<<std::endl;
@@ -116,7 +120,7 @@ int main(){
         sem_destroy(&(fulls[i]));
     }
 
-    std::cout << "sleep 5 sec" << std::endl;
+    std::cout << "sleep 5 sec, main" << std::endl;
     std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
     return 0;

@@ -60,6 +60,7 @@ void splitIntoFile(std::string outfile, std::size_t id, const std::size_t k,
                  const std::size_t m, const std::size_t fifo_size, Kmer **fifo,
                  sem_t *empty, sem_t *full) 
 {
+	int *el_in_fifo = new int(32);
 
 	std::this_thread::sleep_for(std::chrono::milliseconds(200*(id+1)));
 
@@ -86,6 +87,7 @@ void splitIntoFile(std::string outfile, std::size_t id, const std::size_t k,
         if((*sk).len == 0){ // sent if fasta file is finished
             std::cout << "[thread " << id << " over]\n";
             outf.close();
+			delete el_in_fifo;
             // delete sk;
             return;
         } else {
@@ -94,5 +96,7 @@ void splitIntoFile(std::string outfile, std::size_t id, const std::size_t k,
 			delete sk;
         }
         sem_post(empty);
+
+		sem_getvalue(full, el_in_fifo);
     }
 }
