@@ -4,7 +4,7 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
                 const std::size_t q, const std::size_t fifo_size, Kmer** fifos,
                 sem_t* emptys, sem_t* fulls){
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     // ------------------------------ Variables ------------------------------ 
 
@@ -94,7 +94,7 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         for(int ii=0; ii<100; ii++){ // TEST
         //while(c != '\0'){ // \0 should be returned at the end of a sequence
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            std::this_thread::sleep_for(std::chrono::milliseconds(40));
 
             // Get the next k-mer (rotate the std::string once leftwise, and replace last character)
             rotate(kmer_cur.begin(), kmer_cur.begin()+1, kmer_cur.end());
@@ -169,7 +169,7 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
                 // Notifies that a spot has just been filled
                 sem_post(&fulls[fifo_nb]);
                 // We can now create the new super-k-mer, starting at the current k-mer.
-                delete sk;
+                // delete sk;
                 sk = new Kmer(2*k-m, isRevComp, kmer_cur);
             }
 
@@ -187,12 +187,11 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         fifos[fifo_nb*fifo_size + fifo_counter[fifo_nb]] = sk;
         fifo_counter[fifo_nb] = (fifo_counter[fifo_nb]+1)%fifo_size;
         sem_post(&fulls[fifo_nb]);
-
-        // Since we used "new" for the super-k-mer pointer, we delete it
-        delete sk;
     
     } while (false); // TEST ; for now we don't want to loop over the whole file
     //} while (fr.has_next());
+
+    std::cout << "(((extractor done, waiting 10 secs)))" << std::endl;
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 
@@ -203,4 +202,8 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         fifos[fifo_nb*fifo_size + fifo_counter[fifo_nb]] = &kmer_ender;
         sem_post(&fulls[i]);
     }
+
+    std::cout << "sleep 5 sec" << std::endl;
+    std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+    std::cout << "[extractor thread over]" << std::endl;
 }

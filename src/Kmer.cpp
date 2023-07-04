@@ -1,6 +1,6 @@
 #include "../include/Kmer.hpp"
 
-Kmer::Kmer(){}
+//Kmer::Kmer(){}
 
 Kmer::Kmer(std::size_t k_, bool isRevComp_) : arr(1+((k_-1)/32), 0), k{k_}, len{0}, isRevComp{isRevComp_}{}
 

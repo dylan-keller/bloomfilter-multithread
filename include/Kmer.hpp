@@ -32,7 +32,7 @@ class Kmer {
     std::size_t len;
     bool isRevComp;
 
-    Kmer();
+    //Kmer();
     Kmer(std::size_t k_, bool isRevComp_);
     Kmer(std::size_t k_, bool isRevComp_, std::string seq);
     Kmer(const Kmer& km);

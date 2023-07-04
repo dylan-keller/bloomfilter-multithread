@@ -61,7 +61,7 @@ void splitIntoFile(std::string outfile, std::size_t id, const std::size_t k,
                  sem_t *empty, sem_t *full) 
 {
 
-	std::this_thread::sleep_for(std::chrono::milliseconds(400*(id+1)));
+	std::this_thread::sleep_for(std::chrono::milliseconds(200*(id+1)));
 
 	outfile[outfile.length()-5] = std::to_string(id)[0];
 
@@ -83,16 +83,15 @@ void splitIntoFile(std::string outfile, std::size_t id, const std::size_t k,
         sk = fifo[truc];
         fifo_counter = (fifo_counter+1)%fifo_size;
 
-		std::cout << "thread " << id << " in " << (truc) << " recieved " << *sk << std::endl;
-
         if((*sk).len == 0){ // sent if fasta file is finished
-            std::cout<<"!c!"<<std::endl;
             std::cout << "[thread " << id << " over]\n";
             outf.close();
-            delete sk;
+            // delete sk;
             return;
         } else {
+			std::cout << "thread " << id << " in " << (truc) << " recieved " << *sk << std::endl;
             outf << sk << "\n";
+			delete sk;
         }
         sem_post(empty);
     }

@@ -63,7 +63,7 @@ int main(){
     const size_t k = 12;
     const size_t m = 6;
     const size_t q = 3;
-    const size_t fifo_size = 10;
+    const size_t fifo_size = 100;
     ssize_t id = -1;
 
     Kmer* fifos[q*fifo_size];
@@ -115,6 +115,9 @@ int main(){
         sem_destroy(&(emptys[i]));
         sem_destroy(&(fulls[i]));
     }
+
+    std::cout << "sleep 5 sec" << std::endl;
+    std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
     return 0;
 }
