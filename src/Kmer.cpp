@@ -19,14 +19,14 @@ void Kmer::addNucl(char c){
     len++;
 }
 
-std::ostream& operator<<(std::ostream& out, const Kmer& kmer) {
+std::string Kmer::to_string() const{
     std::string res;
     char c;
-    res.resize(kmer.len);
+    res.resize(len);
 
-    if (!kmer.isRevComp){
-        for(std::size_t i=0; i<kmer.len; i++){
-            switch((kmer.arr.at(i/32) >> (2*(i%32))) & 3UL) {
+    if (!isRevComp){
+        for(std::size_t i=0; i<len; i++){
+            switch((arr.at(i/32) >> (2*(i%32))) & 3UL) {
                 case 0:
                     c = 'A';
                     break;
@@ -43,8 +43,8 @@ std::ostream& operator<<(std::ostream& out, const Kmer& kmer) {
             res[i] = c;
         }
     } else {
-        for(std::size_t i=kmer.len; i>0; i--){
-            switch((kmer.arr.at((i-1)/32) >> (2*((i-1)%32))) & 3UL) {
+        for(std::size_t i=len; i>0; i--){
+            switch((arr.at((i-1)/32) >> (2*((i-1)%32))) & 3UL) {
                 case 0:
                     c = 'T';
                     break;
@@ -58,11 +58,13 @@ std::ostream& operator<<(std::ostream& out, const Kmer& kmer) {
                     c = 'C';
                     break;
             }
-            res[kmer.len-i] = c;
+            res[len-i] = c;
         }
     }
+    return res;
+}
 
-    out << res;
-
+std::ostream& operator<<(std::ostream& out, const Kmer& kmer) {
+    out << kmer.to_string();
     return out;
 }

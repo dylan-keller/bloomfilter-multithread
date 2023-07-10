@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <chrono>
+#include <iomanip>
 #include <iostream>
 #include <queue>
 #include <semaphore.h>
@@ -102,7 +103,7 @@ int main(){
         sem_destroy(&(emptys[i]));
         sem_destroy(&(fulls[i]));
     }
-    std::cout << "\n--------------- all done ---------------" << std::endl;
+    cout << "\n--------------- all done ---------------" << endl;
 
     return 0;
 }

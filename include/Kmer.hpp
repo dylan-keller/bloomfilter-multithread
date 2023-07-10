@@ -42,6 +42,8 @@ class Kmer {
 
     void addNucl(char c);
 
+    std::string to_string() const;
+
     friend std::ostream& operator<<(std::ostream& out, const Kmer& kmer);
 };
 
