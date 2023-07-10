@@ -39,21 +39,6 @@ void visualizeBitVector(const bm::bvector<>& bv) {
 
 // ------------------------------------------------------------
 
-void threadfun(queue<Kmer>* fifo, int i, sem_t* empty, sem_t* full){
-    //this_thread::sleep_for(std::chrono::milliseconds(500*(i+1)));
-    while(true){
-        sem_wait(full);
-        if(fifo->front().len == 0){ // sent if fasta file is finished
-            cout << "[thread " << i << " over]\n";
-            return;
-        } else {
-            cout << "(" << i << " " << fifo->front() << " " <<")\n";
-            fifo->pop();
-        }
-        sem_post(empty);
-    }
-}
-
 // ------------------------------------------------------------
 
 int main(){
@@ -64,31 +49,36 @@ int main(){
     const size_t k = 80;
     const size_t m = 35;
     const size_t q = 20;
-    const size_t fifo_size = 1000;
-    ssize_t id = -1;
+    const size_t fifo_size = 100;
+    const size_t bf_size = 1000;
 
     Kmer* fifos[q*fifo_size];
+
+    bm::bvector<> bfs[q];
 
     sem_t emptys[q];
     sem_t fulls[q];
     for(size_t i=0; i<q; i++){
+        bfs[i].resize(bf_size);
+        bfs[i].set_range(0, bf_size, false);
         sem_init(&(emptys[i]), 0, fifo_size);
         sem_init(&(fulls[i]), 0, 0);
     }
-
-    // NOTE : these objects have the same size (might be worth noting for cache uses)
-    // Kmer k1(10,false);
-    // Kmer k2(1000,false);
-    // cout << sizeof(k1) << " " << sizeof(k2) << endl;
 
     thread t1(extractSkmers, "/home/dylan/Documents/sequences/sars-cov-2.fasta",
             k, m, q, fifo_size, fifos, emptys, fulls);
 
     thread splitter_threads[q];
 
+    /*
     for(size_t i=0; i<q; i++){
         splitter_threads[i] = thread(splitIntoFile, "../testing/", i, k, m,
-                                      fifo_size, fifos, true, &emptys[i], &fulls[i]);
+        //                              fifo_size, fifos, true, &emptys[i], &fulls[i]);
+                                        fifo_size, fifos, false, &emptys[i], &fulls[i]);
+    }
+    */
+    for(size_t i=0; i<q; i++){
+        splitter_threads[i] = thread(splitIntoBF, i, k, fifo_size, bf_size, fifos, &bfs[i], &emptys[i], &fulls[i]);
     }
 
     t1.join();
@@ -97,13 +87,18 @@ int main(){
         splitter_threads[i].join();
     }
 
-    cout << "----------------------------------------" << endl;
-
     for(size_t i=0; i<q; i++){
         sem_destroy(&(emptys[i]));
         sem_destroy(&(fulls[i]));
     }
-    cout << "\n--------------- all done ---------------" << endl;
+
+    cout << "----------------------------------------" << endl;
+
+    // queries of the BF
+
+    cout << "--------------- all done ---------------\n";
+
+    visualizeBitVector(bfs[0]);
 
     return 0;
 }
