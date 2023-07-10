@@ -39,15 +39,13 @@ void visualizeBitVector(const bm::bvector<>& bv) {
 
 // ------------------------------------------------------------
 
-// ------------------------------------------------------------
-
 int main(){
     cout << "hello, i do nothing for now\n";
 
     cout << "----------------------------------------" << endl;
 
-    const size_t k = 80;
-    const size_t m = 35;
+    const size_t k = 60;
+    const size_t m = 30;
     const size_t q = 20;
     const size_t fifo_size = 100;
     const size_t bf_size = 1000;
@@ -65,23 +63,25 @@ int main(){
         sem_init(&(fulls[i]), 0, 0);
     }
 
-    thread t1(extractSkmers, "/home/dylan/Documents/sequences/sars-cov-2.fasta",
+    thread extractor_thread(extractSkmers, "/home/dylan/Documents/sequences/sars-cov-2.fasta",
             k, m, q, fifo_size, fifos, emptys, fulls);
 
     thread splitter_threads[q];
 
     /*
     for(size_t i=0; i<q; i++){
-        splitter_threads[i] = thread(splitIntoFile, "../testing/", i, k, m,
+        splitter_threads[i] = thread(splitIntoFile, "../testing/", i, k,
         //                              fifo_size, fifos, true, &emptys[i], &fulls[i]);
                                         fifo_size, fifos, false, &emptys[i], &fulls[i]);
     }
     */
+    
     for(size_t i=0; i<q; i++){
         splitter_threads[i] = thread(splitIntoBF, i, k, fifo_size, bf_size, fifos, &bfs[i], &emptys[i], &fulls[i]);
     }
 
-    t1.join();
+
+    extractor_thread.join();
 
     for(size_t i=0; i<q; i++){
         splitter_threads[i].join();
@@ -92,9 +92,31 @@ int main(){
         sem_destroy(&(fulls[i]));
     }
 
-    cout << "----------------------------------------" << endl;
+    cout << "-------- construction  complete --------" << endl;
 
-    // queries of the BF
+    /*
+
+    for(size_t i=0; i<q; i++){
+        sem_init(&(emptys[i]), 0, fifo_size);
+        sem_init(&(fulls[i]), 0, 0);
+    }
+
+    thread extractor_thread2(extractSkmers, "/home/dylan/Documents/sequences/query.txt",
+            k, m, q, fifo_size, fifos, emptys, fulls);
+
+    thread splitter_threads2[q];
+
+    for(size_t i=0; i<q; i++){
+        splitter_threads2[i] = thread(splitIntoFile, "../testing/", i, k,
+        //                              fifo_size, fifos, true, &emptys[i], &fulls[i]);
+                                        fifo_size, fifos, false, &emptys[i], &fulls[i]);
+    }
+
+    for(size_t i=0; i<q; i++){
+        sem_destroy(&(emptys[i]));
+        sem_destroy(&(fulls[i]));
+    }
+    */
 
     cout << "--------------- all done ---------------\n";
 

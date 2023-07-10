@@ -22,4 +22,7 @@ void splitIntoFile(std::string outfile, std::size_t id, const std::size_t k,
 void splitIntoBF(std::size_t id, const std::size_t k, const std::size_t fifo_size, 
                  const std::size_t bf_size, Kmer** fifo, bm::bvector<>* bf, sem_t* empty, sem_t* full);
 
+void splitQueryBF(std::size_t id, const std::size_t k, const std::size_t fifo_size,
+                const std::size_t bf_size, Kmer** fifo, bm::bvector<>* bf, sem_t* empty, sem_t* full);
+
 #endif

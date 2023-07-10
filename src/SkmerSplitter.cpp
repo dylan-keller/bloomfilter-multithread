@@ -87,3 +87,32 @@ void splitIntoBF(std::size_t id, const std::size_t k, const std::size_t fifo_siz
         sem_post(empty);
     }
 }
+
+void splitQueryBF(std::size_t id, const std::size_t k, const std::size_t fifo_size,
+                const std::size_t bf_size, Kmer** fifo, bm::bvector<>* bf, sem_t* empty, sem_t* full){
+    std::size_t fifo_counter = 0;
+    Kmer* sk;
+
+    std::cout << "[thread " << id << " start]" << std::endl;
+
+    while(true){
+        sem_wait(full);
+
+        sk = fifo[id*fifo_size + fifo_counter];
+        fifo_counter = (fifo_counter+1)%fifo_size;
+
+        if((*sk).len == 0){ // sent if fasta file is finished
+            std::cout << "[thread " << id << " over]\n";
+            delete sk;
+            return;
+        } else {
+			std::string skstr = (*sk).to_string();
+			for(std::size_t i=0; i< (*sk).len-k+1; i++){
+				(*bf).set( (xorshift32(skstr.substr(i,k)))%bf_size );
+			}
+
+			delete sk;
+        }
+        sem_post(empty);
+    }
+}

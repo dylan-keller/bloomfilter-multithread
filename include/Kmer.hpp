@@ -37,9 +37,6 @@ class Kmer {
     Kmer(std::size_t k_, bool isRevComp_, std::string seq);
     Kmer(const Kmer& km);
 
-    // TODO : take care of reverse complement kmers (implement method or constructor)
-    // or let the super-k-mer reader take care of it...
-
     void addNucl(char c);
 
     std::string to_string() const;
