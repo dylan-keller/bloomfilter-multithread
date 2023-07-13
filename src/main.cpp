@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <iomanip>
 #include <iostream>
@@ -46,19 +47,26 @@ int main(){
 
     const size_t k = 60;
     const size_t m = 30;
-    const size_t q = 20;
+    const size_t q = 8;
     const size_t fifo_size = 100;
-    const size_t bf_size = 1000;
+    const size_t bf_size = 1024;
+    const size_t nb_query_buffers = 8;
+    const size_t size_query_buffers = 1024;
 
     Kmer* fifos[q*fifo_size];
 
     bm::bvector<> bfs[q];
+
+    atomic<size_t> counter[nb_query_buffers];
+    bm::bvector<> query_answers[nb_query_buffers];
 
     sem_t emptys[q];
     sem_t fulls[q];
     for(size_t i=0; i<q; i++){
         bfs[i].resize(bf_size);
         bfs[i].set_range(0, bf_size, false);
+        query_answers[i].resize(size_query_buffers);
+        query_answers[i].set_range(0, size_query_buffers, false);
         sem_init(&(emptys[i]), 0, fifo_size);
         sem_init(&(fulls[i]), 0, 0);
     }
@@ -92,7 +100,8 @@ int main(){
         sem_destroy(&(fulls[i]));
     }
 
-    cout << "-------- construction  complete --------" << endl;
+    cout << "---------- construction  done ----------" << endl;
+    cout << "------------- query  start -------------" << endl;
 
     /*
 
@@ -121,6 +130,8 @@ int main(){
     cout << "--------------- all done ---------------\n";
 
     visualizeBitVector(bfs[0]);
+
+    cout << counter[0] << endl;
 
     return 0;
 }

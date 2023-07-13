@@ -25,7 +25,7 @@ void splitIntoFile(std::string outfile, std::size_t id, const std::size_t k,
     std::size_t fifo_counter = 0;
     Kmer* sk;
 
-    std::cout << "[thread " << id << " start]" << std::endl;
+    std::cout << "[file thread " << id << " start]" << std::endl;
 
     while(true){
         sem_wait(full);
@@ -34,7 +34,7 @@ void splitIntoFile(std::string outfile, std::size_t id, const std::size_t k,
         fifo_counter = (fifo_counter+1)%fifo_size;
 
         if((*sk).len == 0){ // sent if fasta file is finished
-            std::cout << "[thread " << id << " over]\n";
+            std::cout << "[file thread " << id << " over]\n";
             outf.close();
             delete sk;
             return;
@@ -59,12 +59,13 @@ void splitIntoFile(std::string outfile, std::size_t id, const std::size_t k,
 }
 
 
-void splitIntoBF(std::size_t id, const std::size_t k, const std::size_t fifo_size, 
-                const std::size_t bf_size, Kmer** fifo, bm::bvector<>* bf, sem_t* empty, sem_t* full){
+void splitIntoBF(std::size_t id, const std::size_t k, const std::size_t fifo_size,
+                 const std::size_t bf_size, Kmer** fifo, bm::bvector<>* bf, sem_t* empty, sem_t* full){
 	std::size_t fifo_counter = 0;
+
     Kmer* sk;
 
-    std::cout << "[thread " << id << " start]" << std::endl;
+    std::cout << "[fill thread " << id << " start]" << std::endl;
 
     while(true){
         sem_wait(full);
@@ -73,7 +74,7 @@ void splitIntoBF(std::size_t id, const std::size_t k, const std::size_t fifo_siz
         fifo_counter = (fifo_counter+1)%fifo_size;
 
         if((*sk).len == 0){ // sent if fasta file is finished
-            std::cout << "[thread " << id << " over]\n";
+            std::cout << "[fill thread " << id << " over]\n";
             delete sk;
             return;
         } else {
@@ -81,19 +82,22 @@ void splitIntoBF(std::size_t id, const std::size_t k, const std::size_t fifo_siz
 			for(std::size_t i=0; i< (*sk).len-k+1; i++){
 				(*bf).set( (xorshift32(skstr.substr(i,k)))%bf_size );
 			}
-
 			delete sk;
         }
         sem_post(empty);
     }
 }
 
-void splitQueryBF(std::size_t id, const std::size_t k, const std::size_t fifo_size,
-                const std::size_t bf_size, Kmer** fifo, bm::bvector<>* bf, sem_t* empty, sem_t* full){
+void splitQueryBF(std::size_t id, const std::size_t k, const std::size_t fifo_size, const std::size_t bf_size,
+                std::atomic<std::size_t>& counter, Kmer** fifo, bm::bvector<>* bf, sem_t* empty, sem_t* full){
     std::size_t fifo_counter = 0;
+    std::size_t kmer_pos = 0;
+    std::size_t expected = 0;
+    std::size_t desired;
+
     Kmer* sk;
 
-    std::cout << "[thread " << id << " start]" << std::endl;
+    std::cout << "[query thread " << id << " start]" << std::endl;
 
     while(true){
         sem_wait(full);
@@ -102,17 +106,65 @@ void splitQueryBF(std::size_t id, const std::size_t k, const std::size_t fifo_si
         fifo_counter = (fifo_counter+1)%fifo_size;
 
         if((*sk).len == 0){ // sent if fasta file is finished
-            std::cout << "[thread " << id << " over]\n";
+            std::cout << "[query thread " << id << " over]\n";
             delete sk;
             return;
+        
         } else {
+            kmer_pos = (*sk).position;
 			std::string skstr = (*sk).to_string();
 			for(std::size_t i=0; i< (*sk).len-k+1; i++){
+                
 				(*bf).set( (xorshift32(skstr.substr(i,k)))%bf_size );
-			}
 
+                do {
+                    desired = expected+1;
+                } while(!counter.compare_exchange_weak(expected, desired, std::memory_order_relaxed));
+
+                kmer_pos++;
+			}
 			delete sk;
         }
         sem_post(empty);
+    }
+}
+
+void splitQueryBF(QueryParameters qp){
+    std::size_t fifo_counter = 0;
+    std::size_t kmer_pos = 0;
+    std::size_t expected = 0;
+    std::size_t desired;
+
+    Kmer* sk;
+
+    std::cout << "[query thread " << qp.id << " start]" << std::endl;
+
+    while(true){
+        sem_wait(qp.full);
+
+        sk = qp.fifo[qp.id*qp.fifo_size + fifo_counter];
+        fifo_counter = (fifo_counter+1)%qp.fifo_size;
+
+        if((*sk).len == 0){ // sent if fasta file is finished
+            std::cout << "[query thread " << qp.id << " over]\n";
+            delete sk;
+            return;
+        
+        } else {
+            kmer_pos = (*sk).position;
+			std::string skstr = (*sk).to_string();
+			for(std::size_t i=0; i< (*sk).len-qp.k+1; i++){
+                
+				(*qp.bf).set( (xorshift32(skstr.substr(i,qp.k)))%qp.bf_size );
+
+                do {
+                    desired = expected+1;
+                } while(!qp.counter.compare_exchange_weak(expected, desired, std::memory_order_relaxed));
+
+                kmer_pos++;
+			}
+			delete sk;
+        }
+        sem_post(qp.empty);
     }
 }

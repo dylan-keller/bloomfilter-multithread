@@ -24,17 +24,25 @@
  * - size_t len : how many letters are in this k-mer.
  *                useful because otherwise we can't know if 00 is an
  *                empty char or an A.
+ * - std::size_t position : used to store the position of the k-mer relative to the
+ *                          input file. a position of i means this k-mer's first
+ *                          letter is the i-th letter of the input file.
+ *                          This will be used for the querying.
+ * - bool isRevComp : if this k-mer is a reverse complement or not.
  */
 class Kmer {
   public :
     std::vector<uint64_t> arr;
     std::size_t k;
     std::size_t len;
+    std::size_t position;
     bool isRevComp;
 
     //Kmer();
     Kmer(std::size_t k_, bool isRevComp_);
+    Kmer(std::size_t k_, std::size_t pos, bool isRevComp_);
     Kmer(std::size_t k_, bool isRevComp_, std::string seq);
+    Kmer(std::size_t k_, std::size_t pos, bool isRevComp_, std::string seq);
     Kmer(const Kmer& km);
 
     void addNucl(char c);
