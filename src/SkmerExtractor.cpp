@@ -19,7 +19,7 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
     uint64_t rhvalues[k-m+1];
 
     // The forward (resp. reverse-strand) hash values
-    uint64_t fhVal=0, rhVal=0; 
+    uint64_t hVal=0, fhVal=0, rhVal=0; 
 
     // Tells us our kmer is reverse complement or not
     bool isRevComp;
@@ -59,6 +59,8 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         for (std::size_t i=0; i<k; i++){
             kmer_cur[i] = fr.next_char();
         }
+
+        hVal = NTC64(kmer_cur.c_str(), m, fhVal, rhVal);
 
         // Let's compute the hash values of all m-mers in our first k-mer using ntHash
         for (std::size_t i=0; i<k-m+1; i++){
@@ -100,6 +102,10 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
 
             // Get the hash value of the new m-mer (rightmost)
             NTC64(kmer_cur[k-m-1], kmer_cur[k-1], m, fhVal, rhVal);
+
+            if (actual_counter<3){
+                std::cout << '{' <<  kmer_cur << '!' << fhVal << '!' << rhVal << '}';
+            }
 
             // Place the new hash values in their respective arrays
             // Thanks to 'counter', we can use the array as a circular array

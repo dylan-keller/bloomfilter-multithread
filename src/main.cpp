@@ -45,8 +45,8 @@ int main(){
 
     cout << "----------------------------------------" << endl;
 
-    const size_t k = 60;
-    const size_t m = 30;
+    const size_t k = 30;
+    const size_t m = 15;
     const size_t q = 3;
     const size_t fifo_size = 100;
     const size_t bf_size = 1024;
