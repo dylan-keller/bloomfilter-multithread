@@ -89,7 +89,7 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         c = fr.next_char();
         counter = 0;
 
-        for(int ii=0; ii<300; ii++){ // TEST
+        for(int ii=0; ii<500; ii++){ // TEST
         //while(c != '\0'){ // \0 should be returned at the end of a sequence
 
             // Get the next k-mer (rotate the std::string once leftwise, and replace last character)

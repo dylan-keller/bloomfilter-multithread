@@ -47,7 +47,7 @@ int main(){
 
     const size_t k = 60;
     const size_t m = 30;
-    const size_t q = 8;
+    const size_t q = 3;
     const size_t fifo_size = 100;
     const size_t bf_size = 1024;
     const size_t nb_query_buffers = 8;
@@ -88,7 +88,6 @@ int main(){
         splitter_threads[i] = thread(splitIntoBF, i, k, fifo_size, bf_size, fifos, &bfs[i], &emptys[i], &fulls[i]);
     }
 
-
     extractor_thread.join();
 
     for(size_t i=0; i<q; i++){
@@ -112,24 +111,30 @@ int main(){
             k, m, q, fifo_size, fifos, emptys, fulls);
 
     thread splitter_threads2[q];
-
-    //QueryParameters qp((size_t)1, k, fifo_size, bf_size, size_query_buffers, nb_query_buffers, fifos, bfs[1], query_answers, counter, emptys, fulls);
+    
     for(size_t i=0; i<q; i++){
-        QueryParameters qp(i, k, fifo_size, bf_size, size_query_buffers, nb_query_buffers, fifos, bfs[i], query_answers, counter, &emptys[i], &fulls[i]);
-        //splitter_threads2[i] = thread(splitIntoFile, "../testing/", i, k,
-        //                              fifo_size, fifos, true, &emptys[i], &fulls[i]);
-        //                                fifo_size, fifos, false, &emptys[i], &fulls[i]);
+        splitter_threads2[i] = thread(splitQueryBF, i, k, fifo_size, bf_size, 
+                                    size_query_buffers, nb_query_buffers, counter, 
+                                    fifos, &bfs[i], query_answers, 
+                                    &emptys[i], &fulls[i]);
+    }
+
+    extractor_thread2.join();
+
+    for(size_t i=0; i<q; i++){
+        splitter_threads2[i].join();
     }
 
     for(size_t i=0; i<q; i++){
         sem_destroy(&(emptys[i]));
         sem_destroy(&(fulls[i]));
     }
-    
 
     cout << "--------------- all done ---------------\n";
 
-    visualizeBitVector(bfs[0]);
+    //visualizeBitVector(bfs[0]);
+
+    visualizeBitVector(query_answers[0]);
 
     cout << counter[0] << endl;
 

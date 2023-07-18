@@ -101,8 +101,10 @@ void splitIntoBF(std::size_t id, const std::size_t k, const std::size_t fifo_siz
 }
 
 void splitQueryBF(std::size_t id, const std::size_t k, const std::size_t fifo_size, const std::size_t bf_size,
-                std::atomic<std::size_t>& counter, Kmer** fifo, bm::bvector<>* bf, sem_t* empty, sem_t* full){
+                  const std::size_t outbv_size, const std::size_t outbv_nb, std::atomic<std::size_t>* counter, 
+                  Kmer** fifo, bm::bvector<>* bf, bm::bvector<>* outbv, sem_t* empty, sem_t* full){
     std::size_t fifo_counter = 0;
+    std::size_t counter_c = 0;
     std::size_t kmer_pos = 0;
     std::size_t expected = 0;
     std::size_t desired;
@@ -124,14 +126,18 @@ void splitQueryBF(std::size_t id, const std::size_t k, const std::size_t fifo_si
         
         } else {
             kmer_pos = (*sk).position;
+
 			std::string skstr = (*sk).to_string();
-			for(std::size_t i=0; i< (*sk).len-k+1; i++){
+			for(std::size_t i=0; i<(*sk).len-k+1; i++){
+                counter_c = ((kmer_pos+i)/fifo_size) % outbv_nb;
+            
+                uint32_t hash = (xorshift32(skstr.substr(i,k))) % bf_size;
                 
-				(*bf).set( (xorshift32(skstr.substr(i,k)))%bf_size );
+                if ((*bf).test(hash)) (*outbv).set(kmer_pos+i);
 
                 do {
                     desired = expected+1;
-                } while(!counter.compare_exchange_weak(expected, desired, std::memory_order_relaxed));
+                } while(!counter[counter_c].compare_exchange_weak(expected, desired, std::memory_order_relaxed));
 
                 kmer_pos++;
 			}
