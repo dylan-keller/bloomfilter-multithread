@@ -90,6 +90,9 @@ void splitIntoBF(std::size_t id, const std::size_t k, const std::size_t fifo_siz
             delete sk;
             return;
         } else {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50+id*25));
+            if (id==1) std::cout << '[' << sk->position << ']';
+
 			std::string skstr = (*sk).to_string();
 			for(std::size_t i=0; i< (*sk).len-k+1; i++){
 				(*bf).set( (xorshift32(skstr.substr(i,k)))%bf_size );
@@ -126,10 +129,13 @@ void splitQueryBF(std::size_t id, const std::size_t k, const std::size_t fifo_si
         
         } else {
             kmer_pos = (*sk).position;
-
 			std::string skstr = (*sk).to_string();
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(50+id*25));
+            if (id==1) std::cout << '[' << sk->position << ']';
+
 			for(std::size_t i=0; i<(*sk).len-k+1; i++){
-                counter_c = ((kmer_pos+i)/fifo_size) % outbv_nb;
+                counter_c = ((kmer_pos+i)/outbv_size) % outbv_nb;
             
                 uint32_t hash = (xorshift32(skstr.substr(i,k))) % bf_size;
                 
@@ -139,7 +145,7 @@ void splitQueryBF(std::size_t id, const std::size_t k, const std::size_t fifo_si
                     desired = expected+1;
                 } while(!counter[counter_c].compare_exchange_weak(expected, desired, std::memory_order_relaxed));
 
-                kmer_pos++;
+                // kmer_pos++;
 			}
 			delete sk;
         }
@@ -147,6 +153,7 @@ void splitQueryBF(std::size_t id, const std::size_t k, const std::size_t fifo_si
     }
 }
 
+/*
 void splitQueryBF(QueryParameters qp){
     std::size_t fifo_counter = 0;
     std::size_t counter_c = 0;
@@ -189,3 +196,4 @@ void splitQueryBF(QueryParameters qp){
         sem_post(qp.empty);
     }
 }
+*/

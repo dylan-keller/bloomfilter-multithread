@@ -32,8 +32,9 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
     uint64_t rhmin; // hash value of the reverse-strand minimizer 
     uint64_t hmin;  // hash value of the canonical minimizer 
 
-    // Loop counter (used for our circular arrays fhvalues and rhvalues)
+    // Loop counter (used for our circular arrays fhvalues and rhvalues) and normal counter
     uint16_t counter;
+    uint64_t actual_counter = 0;
     
     // Threads, each associated to a super-k-mer fifo
     std::vector<std::thread> thread_fifos;
@@ -83,11 +84,12 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         } 
 
         // We create the first super-k-mer with our current k-mer
-        Kmer* sk = new Kmer(2*k-m, isRevComp, kmer_cur);
+        Kmer* sk = new Kmer(2*k-m, actual_counter, isRevComp, kmer_cur);
 
         // And we start reading the rest of the file
         c = fr.next_char();
         counter = 0;
+        actual_counter++;
 
         for(int ii=0; ii<500; ii++){ // TEST
         //while(c != '\0'){ // \0 should be returned at the end of a sequence
@@ -166,13 +168,13 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
                 sem_post(&fulls[fifo_nb]);
                 // We can now create the new super-k-mer, starting at the current k-mer.
                 // delete sk;
-                sk = new Kmer(2*k-m, isRevComp, kmer_cur);
+                sk = new Kmer(2*k-m, actual_counter, isRevComp, kmer_cur);
             }
 
             c = fr.next_char();
             counter = (counter+1)%(k-m+1);
+            actual_counter++;
             new_skmer_flag = false;
-
         }
 
         // when the sequence (or file) is over, we need to send the final super-k-mer
