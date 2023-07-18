@@ -1,6 +1,18 @@
 #include "../include/SkmerSplitter.hpp"
 #include "SkmerSplitter.hpp"
 
+QueryParameters::QueryParameters(
+        std::size_t id, const std::size_t k, const std::size_t fifo_size, 
+        const std::size_t bf_size, const std::size_t outbv_size, 
+        const std::size_t outbv_nb, 
+        Kmer** fifo, bm::bvector<>* bf, bm::bvector<>* outbv, 
+        std::atomic<std::size_t>* counters, 
+        sem_t* empty, sem_t* full) : 
+        id{id}, k{k}, fifo_size{fifo_size}, bf_size{bf_size}, 
+        outbv_size{outbv_size}, outbv_nb{outbv_nb},
+        fifo{fifo}, bf{bf}, outbv{outbv}, counters{counters}, empty{empty},
+        full{full} {}
+
 uint32_t xorshift32(const std::string& str) {
     uint32_t hash = 0;
     for (char c : str) {
@@ -131,6 +143,7 @@ void splitQueryBF(std::size_t id, const std::size_t k, const std::size_t fifo_si
 
 void splitQueryBF(QueryParameters qp){
     std::size_t fifo_counter = 0;
+    std::size_t counter_c = 0;
     std::size_t kmer_pos = 0;
     std::size_t expected = 0;
     std::size_t desired;
@@ -152,6 +165,8 @@ void splitQueryBF(QueryParameters qp){
         
         } else {
             kmer_pos = (*sk).position;
+            counter_c = (kmer_pos/qp.fifo_size) % qp.outbv_nb;
+
 			std::string skstr = (*sk).to_string();
 			for(std::size_t i=0; i< (*sk).len-qp.k+1; i++){
                 
@@ -159,7 +174,7 @@ void splitQueryBF(QueryParameters qp){
 
                 do {
                     desired = expected+1;
-                } while(!qp.counter.compare_exchange_weak(expected, desired, std::memory_order_relaxed));
+                } while(!qp.counters[counter_c].compare_exchange_weak(expected, desired, std::memory_order_relaxed));
 
                 kmer_pos++;
 			}

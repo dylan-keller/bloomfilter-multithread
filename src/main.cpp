@@ -103,8 +103,6 @@ int main(){
     cout << "---------- construction  done ----------" << endl;
     cout << "------------- query  start -------------" << endl;
 
-    /*
-
     for(size_t i=0; i<q; i++){
         sem_init(&(emptys[i]), 0, fifo_size);
         sem_init(&(fulls[i]), 0, 0);
@@ -115,17 +113,19 @@ int main(){
 
     thread splitter_threads2[q];
 
+    //QueryParameters qp((size_t)1, k, fifo_size, bf_size, size_query_buffers, nb_query_buffers, fifos, bfs[1], query_answers, counter, emptys, fulls);
     for(size_t i=0; i<q; i++){
-        splitter_threads2[i] = thread(splitIntoFile, "../testing/", i, k,
+        QueryParameters qp(i, k, fifo_size, bf_size, size_query_buffers, nb_query_buffers, fifos, bfs[i], query_answers, counter, &emptys[i], &fulls[i]);
+        //splitter_threads2[i] = thread(splitIntoFile, "../testing/", i, k,
         //                              fifo_size, fifos, true, &emptys[i], &fulls[i]);
-                                        fifo_size, fifos, false, &emptys[i], &fulls[i]);
+        //                                fifo_size, fifos, false, &emptys[i], &fulls[i]);
     }
 
     for(size_t i=0; i<q; i++){
         sem_destroy(&(emptys[i]));
         sem_destroy(&(fulls[i]));
     }
-    */
+    
 
     cout << "--------------- all done ---------------\n";
 

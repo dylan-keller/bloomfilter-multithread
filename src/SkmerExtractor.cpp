@@ -89,8 +89,8 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         c = fr.next_char();
         counter = 0;
 
-        //for(int ii=0; ii<300; ii++){ // TEST
-        while(c != '\0'){ // \0 should be returned at the end of a sequence
+        for(int ii=0; ii<300; ii++){ // TEST
+        //while(c != '\0'){ // \0 should be returned at the end of a sequence
 
             // Get the next k-mer (rotate the std::string once leftwise, and replace last character)
             rotate(kmer_cur.begin(), kmer_cur.begin()+1, kmer_cur.end());
@@ -186,8 +186,8 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         fifo_counter[fifo_nb] = (fifo_counter[fifo_nb]+1)%fifo_size;
         sem_post(&fulls[fifo_nb]);
     
-    //} while (false); // TEST ; for now we don't want to loop over the whole file
-    } while (fr.has_next());
+    } while (false); // TEST ; for now we don't want to loop over the whole file
+    //} while (fr.has_next());
 
     std::cout << "(((extraction done)))" << std::endl;
 

@@ -31,8 +31,9 @@ struct QueryParameters{
     QueryParameters(
         std::size_t id, const std::size_t k, const std::size_t fifo_size, 
         const std::size_t bf_size, const std::size_t outbv_size, 
-        const std::size_t outbv_nb, Kmer** fifo, bm::bvector<>* bf, 
-        bm::bvector<>* outbv, std::atomic<std::size_t>* counters, 
+        const std::size_t outbv_nb, 
+        Kmer** fifo, bm::bvector<>* bf, bm::bvector<>* outbv, 
+        std::atomic<std::size_t>* counters, 
         sem_t* empty, sem_t* full);
 };
 
