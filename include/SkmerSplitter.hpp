@@ -12,7 +12,8 @@
 #include <thread>
 
 #include "Kmer.hpp"
-#include "/home/dylan/Documents/code/bloomfilter-multithread/external/bitmagic/src/bm.h"
+#include "/mnt/c/Users/dylan/Documents/M1/stage/projet2/bloomfilter-multithread/external/bitmagic/src/bm.h"
+//#include "/home/dylan/Documents/code/bloomfilter-multithread/external/bitmagic/src/bm.h"
 
 struct QueryParameters{
     std::size_t id;

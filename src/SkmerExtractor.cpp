@@ -61,12 +61,16 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         }
 
         hVal = NTC64(kmer_cur.c_str(), m, fhVal, rhVal);
+        // std::cout << "[" << fhVal << "_" << rhVal << "]\n";
+        fhvalues[0] = fhVal;
+        rhvalues[0] = rhVal;
 
         // Let's compute the hash values of all m-mers in our first k-mer using ntHash
-        for (std::size_t i=0; i<k-m+1; i++){
+        for (std::size_t i=0; i<k-m; i++){
             NTC64(kmer_cur[i], kmer_cur[i+m], m, fhVal, rhVal);
-            fhvalues[i] = fhVal;
-            rhvalues[i] = rhVal;
+            fhvalues[i+1] = fhVal;
+            rhvalues[i+1] = rhVal;
+            // std::cout << "{" << i << "_" << fhVal << "_" << rhVal << "}\n";
         }
 
         // Among these m-mers, let's find the minimizer (our first minimizer)
@@ -96,16 +100,16 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         for(int ii=0; ii<500; ii++){ // TEST
         //while(c != '\0'){ // \0 should be returned at the end of a sequence
 
+            // Get the hash value of the new m-mer (rightmost)
+            NTC64(kmer_cur[k-m], c, m, fhVal, rhVal);
+
             // Get the next k-mer (rotate the std::string once leftwise, and replace last character)
             rotate(kmer_cur.begin(), kmer_cur.begin()+1, kmer_cur.end());
             kmer_cur[k-1] = c;
 
-            // Get the hash value of the new m-mer (rightmost)
-            NTC64(kmer_cur[k-m-1], kmer_cur[k-1], m, fhVal, rhVal);
-
-            if (actual_counter<3){
-                std::cout << '{' <<  kmer_cur << '!' << fhVal << '!' << rhVal << '}';
-            }
+            // if (actual_counter<5){
+            //     std::cout << '{' <<  kmer_cur << '_' << fhVal << '_' << rhVal << "}\n";
+            // }
 
             // Place the new hash values in their respective arrays
             // Thanks to 'counter', we can use the array as a circular array

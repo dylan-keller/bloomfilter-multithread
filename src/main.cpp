@@ -10,8 +10,11 @@
 #include <thread>
 #include <vector>
 
-#include "/home/dylan/Documents/code/ntHash-AVX512-rs_avx/ntHashIterator.hpp"
-#include "/home/dylan/Documents/code/bloomfilter-multithread/external/bitmagic/src/bm.h"
+
+#include "/mnt/c/Users/dylan/Documents/M1/stage/projet2/bloomfilter-multithread/external/ntHash-AVX512/ntHashIterator.hpp"
+#include "/mnt/c/Users/dylan/Documents/M1/stage/projet2/bloomfilter-multithread/external/bitmagic/src/bm.h"
+// #include "/home/dylan/Documents/code/ntHash-AVX512-rs_avx/ntHashIterator.hpp"
+// #include "/home/dylan/Documents/code/bloomfilter-multithread/external/bitmagic/src/bm.h"
 //#include "external/ntHash-AVX512/ntHashIterator.hpp"
 #include "FastaReader.hpp"
 #include "Kmer.hpp"
@@ -57,7 +60,7 @@ int main(){
 
     bm::bvector<> bfs[q];
 
-    atomic<size_t> counter[nb_query_buffers];
+    atomic<size_t> counter[nb_query_buffers] = {}; // = {} initializes all values to zero
     bm::bvector<> query_answers[nb_query_buffers];
 
     sem_t emptys[q];
@@ -71,7 +74,7 @@ int main(){
         sem_init(&(fulls[i]), 0, 0);
     }
 
-    thread extractor_thread(extractSkmers, "/home/dylan/Documents/sequences/sars-cov-2.fasta",
+    thread extractor_thread(extractSkmers, "/mnt/c/Users/dylan/Documents/M1/stage/sequences/sars-cov-2.fasta",
             k, m, q, fifo_size, fifos, emptys, fulls);
 
     thread splitter_threads[q];
@@ -107,7 +110,7 @@ int main(){
         sem_init(&(fulls[i]), 0, 0);
     }
 
-    thread extractor_thread2(extractSkmers, "/home/dylan/Documents/sequences/query.txt",
+    thread extractor_thread2(extractSkmers, "/mnt/c/Users/dylan/Documents/M1/stage/sequences/query.txt",
             k, m, q, fifo_size, fifos, emptys, fulls);
 
     thread splitter_threads2[q];
@@ -136,7 +139,7 @@ int main(){
 
     visualizeBitVector(query_answers[0]);
 
-    cout << counter[0] << endl;
+    cout << "counter 0: " << counter[0] << endl;
 
     return 0;
 }
