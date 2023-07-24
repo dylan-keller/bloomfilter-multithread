@@ -105,6 +105,7 @@ void splitQueryBF(std::size_t id, const std::size_t k, const std::size_t fifo_si
                   Kmer** fifo, bm::bvector<>* bf, bm::bvector<>* outbv, sem_t* empty, sem_t* full){
     std::size_t fifo_counter = 0;
     std::size_t counter_c = 0;
+    std::size_t last_counter = 0;
     std::size_t kmer_pos = 0;
     std::size_t expected = 0;
     std::size_t desired;
@@ -130,6 +131,11 @@ void splitQueryBF(std::size_t id, const std::size_t k, const std::size_t fifo_si
 
 			for(std::size_t i=0; i<(*sk).len-k+1; i++){
                 counter_c = ((kmer_pos+i)/outbv_size) % outbv_nb;
+
+                while(counter_c != last_counter){
+                    last_counter = (last_counter+1) % outbv_nb;
+                    // check the lock number last_counter
+                }
             
                 uint32_t hash = (xorshift32(skstr.substr(i,k))) % bf_size;
                 

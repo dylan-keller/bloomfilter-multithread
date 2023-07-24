@@ -3,6 +3,7 @@
 #include <chrono>
 #include <iomanip>
 #include <iostream>
+#include <mutex>
 #include <queue>
 #include <semaphore.h>
 #include <stdexcept>
@@ -62,6 +63,7 @@ int main(){
 
     atomic<size_t> counter[nb_query_buffers] = {}; // = {} initializes all values to zero
     bm::bvector<> query_answers[nb_query_buffers];
+    mutex query_mutex[nb_query_buffers];
 
     sem_t emptys[q];
     sem_t fulls[q];
