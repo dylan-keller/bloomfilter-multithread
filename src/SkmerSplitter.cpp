@@ -121,6 +121,7 @@ void splitQueryBF(std::size_t id, const std::size_t k, const std::size_t fifo_si
         fifo_counter = (fifo_counter+1)%fifo_size;
 
         if((*sk).len == 0){ // sent if fasta file is finished
+            counter[outbv_nb]++;
             std::cout << "[query thread " << id << " over]\n";
             delete sk;
             return;
@@ -136,8 +137,9 @@ void splitQueryBF(std::size_t id, const std::size_t k, const std::size_t fifo_si
                     last_counter = (last_counter+1) % outbv_nb;
                     // check the lock number last_counter
                     {
-                        std::cout << "<thread " << id << " will lock>\n";
+                        std::cout << "<thread " << id << " will lock at " << last_counter << ">\n";
                         std::lock_guard<std::mutex> lock(query_mutex[last_counter]);
+                        std::cout << "<thread " << id << " continues>\n";
                     }
                 }
             

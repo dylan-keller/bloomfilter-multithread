@@ -11,10 +11,10 @@
 #include <thread>
 #include <vector>
 
-#include "/mnt/c/Users/dylan/Documents/M1/stage/projet2/bloomfilter-multithread/external/ntHash-AVX512/ntHashIterator.hpp"
-#include "/mnt/c/Users/dylan/Documents/M1/stage/projet2/bloomfilter-multithread/external/bitmagic/src/bm.h"
-// #include "/home/dylan/Documents/code/ntHash-AVX512-rs_avx/ntHashIterator.hpp"
-// #include "/home/dylan/Documents/code/bloomfilter-multithread/external/bitmagic/src/bm.h"
+// #include "/mnt/c/Users/dylan/Documents/M1/stage/projet2/bloomfilter-multithread/external/ntHash-AVX512/ntHashIterator.hpp"
+// #include "/mnt/c/Users/dylan/Documents/M1/stage/projet2/bloomfilter-multithread/external/bitmagic/src/bm.h"
+#include "/home/dylan/Documents/code/ntHash-AVX512-rs_avx/ntHashIterator.hpp"
+#include "/home/dylan/Documents/code/bloomfilter-multithread/external/bitmagic/src/bm.h"
 //#include "external/ntHash-AVX512/ntHashIterator.hpp"
 #include "FastaReader.hpp"
 #include "Kmer.hpp"
@@ -61,7 +61,8 @@ int main(){
 
     bm::bvector<> bfs[q];
 
-    atomic<size_t> counter[nb_query_buffers] = {}; // = {} initializes all values to zero
+    atomic<size_t> counter[nb_query_buffers+1] = {}; // = {} initializes all values to zero
+        // last counter used to count finished threads
     bm::bvector<> query_answers[nb_query_buffers];
     mutex query_mutex[nb_query_buffers];
 
@@ -78,8 +79,8 @@ int main(){
         sem_init(&(fulls[i]), 0, 0);
     }
 
-    thread extractor_thread(extractSkmers, "/mnt/c/Users/dylan/Documents/M1/stage/sequences/sars-cov-2.fasta",
-            k, m, q, fifo_size, fifos, emptys, fulls);
+    thread extractor_thread(extractSkmers, "/home/dylan/Documents/sequences/sars-cov-2.fasta",
+            k, m, q, fifo_size, fifos, emptys, fulls, nullptr);
 
     thread splitter_threads[q];
 
@@ -114,8 +115,8 @@ int main(){
         sem_init(&(fulls[i]), 0, 0);
     }
 
-    thread extractor_thread2(extractSkmers, "/mnt/c/Users/dylan/Documents/M1/stage/sequences/query.txt",
-            k, m, q, fifo_size, fifos, emptys, fulls);
+    thread extractor_thread2(extractSkmers, "/home/dylan/Documents/sequences/query.txt",
+            k, m, q, fifo_size, fifos, emptys, fulls, &counter[nb_query_buffers]);
 
     thread splitter_threads2[q];
     
@@ -125,23 +126,10 @@ int main(){
                                     fifos, &bfs[i], query_answers, 
                                     query_mutex, &emptys[i], &fulls[i]);
     }
-
-
-
-    /*
-    extractor_thread2.join();
-
-    for(size_t i=0; i<q; i++){
-        splitter_threads2[i].join();
-    }
-    */
-
-   bool not_done = true;
-
-    
-    while(not_done){
+  
+    while(counter[nb_query_buffers] != q+1){
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        cout << "<new loop>\n";
+        cout << "<new loop " << counter[nb_query_buffers] << ">\n";
 
         if (counter[(last_locked_buffer+1)%nb_query_buffers] == size_query_buffers){
             query_mutex[(last_locked_buffer+1)%nb_query_buffers].lock();
@@ -149,18 +137,12 @@ int main(){
 
             last_locked_buffer = (last_locked_buffer+1)%nb_query_buffers;
         }
+    }
 
-        for (auto& thread : splitter_threads2) {
-            if (!thread.joinable()) {
-                cout << "done !";
-                not_done = false;
-                // does not work replace it with a counter that all threads increment
-                // the main() will check if this counter == nb of threads (extractor + splitter)
-            } else {
-                not_done = true;
-                break;
-            }
-        }
+    extractor_thread2.join();
+
+    for(size_t i=0; i<q; i++){
+        splitter_threads2[i].join();
     }
 
     for(size_t i=0; i<q; i++){

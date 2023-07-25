@@ -2,7 +2,7 @@
 
 void extractSkmers(std::string filename, const std::size_t k, const std::size_t m,
                 const std::size_t q, const std::size_t fifo_size, Kmer** fifos,
-                sem_t* emptys, sem_t* fulls){
+                sem_t* emptys, sem_t* fulls, std::atomic<std::size_t>* end_increment){
     
     // ------------------------------ Variables ------------------------------ 
 
@@ -209,6 +209,10 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         sem_wait(&emptys[i]);
         fifos[i*fifo_size + fifo_counter[i]] = kmer_ender;
         sem_post(&fulls[i]);
+    }
+
+    if (end_increment != nullptr){
+        end_increment[0]++;
     }
 
     std::cout << "[extractor thread over]" << std::endl;
