@@ -102,7 +102,7 @@ void splitIntoBF(std::size_t id, const std::size_t k, const std::size_t fifo_siz
 
 void splitQueryBF(std::size_t id, const std::size_t k, const std::size_t fifo_size, const std::size_t bf_size,
                   const std::size_t outbv_size, const std::size_t outbv_nb, std::atomic<std::size_t>* counter, 
-                  Kmer** fifo, bm::bvector<>* bf, bm::bvector<>* outbv, sem_t* empty, sem_t* full){
+                  Kmer** fifo, bm::bvector<>* bf, bm::bvector<>* outbv, std::mutex* query_mutex, sem_t* empty, sem_t* full){
     std::size_t fifo_counter = 0;
     std::size_t counter_c = 0;
     std::size_t last_counter = 0;
@@ -135,6 +135,10 @@ void splitQueryBF(std::size_t id, const std::size_t k, const std::size_t fifo_si
                 while(counter_c != last_counter){
                     last_counter = (last_counter+1) % outbv_nb;
                     // check the lock number last_counter
+                    {
+                        std::cout << "<thread " << id << " will lock>\n";
+                        std::lock_guard<std::mutex> lock(query_mutex[last_counter]);
+                    }
                 }
             
                 uint32_t hash = (xorshift32(skstr.substr(i,k))) % bf_size;

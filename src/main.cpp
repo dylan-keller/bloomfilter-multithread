@@ -11,7 +11,6 @@
 #include <thread>
 #include <vector>
 
-
 #include "/mnt/c/Users/dylan/Documents/M1/stage/projet2/bloomfilter-multithread/external/ntHash-AVX512/ntHashIterator.hpp"
 #include "/mnt/c/Users/dylan/Documents/M1/stage/projet2/bloomfilter-multithread/external/bitmagic/src/bm.h"
 // #include "/home/dylan/Documents/code/ntHash-AVX512-rs_avx/ntHashIterator.hpp"
@@ -56,6 +55,7 @@ int main(){
     const size_t bf_size = 1024;
     const size_t nb_query_buffers = 8;
     const size_t size_query_buffers = 1024;
+    size_t last_locked_buffer = nb_query_buffers-1;
 
     Kmer* fifos[q*fifo_size];
 
@@ -64,6 +64,8 @@ int main(){
     atomic<size_t> counter[nb_query_buffers] = {}; // = {} initializes all values to zero
     bm::bvector<> query_answers[nb_query_buffers];
     mutex query_mutex[nb_query_buffers];
+
+    query_mutex[last_locked_buffer].lock();
 
     sem_t emptys[q];
     sem_t fulls[q];
@@ -121,13 +123,44 @@ int main(){
         splitter_threads2[i] = thread(splitQueryBF, i, k, fifo_size, bf_size, 
                                     size_query_buffers, nb_query_buffers, counter, 
                                     fifos, &bfs[i], query_answers, 
-                                    &emptys[i], &fulls[i]);
+                                    query_mutex, &emptys[i], &fulls[i]);
     }
 
+
+
+    /*
     extractor_thread2.join();
 
     for(size_t i=0; i<q; i++){
         splitter_threads2[i].join();
+    }
+    */
+
+   bool not_done = true;
+
+    
+    while(not_done){
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        cout << "<new loop>\n";
+
+        if (counter[(last_locked_buffer+1)%nb_query_buffers] == size_query_buffers){
+            query_mutex[(last_locked_buffer+1)%nb_query_buffers].lock();
+            query_mutex[last_locked_buffer].unlock();
+
+            last_locked_buffer = (last_locked_buffer+1)%nb_query_buffers;
+        }
+
+        for (auto& thread : splitter_threads2) {
+            if (!thread.joinable()) {
+                cout << "done !";
+                not_done = false;
+                // does not work replace it with a counter that all threads increment
+                // the main() will check if this counter == nb of threads (extractor + splitter)
+            } else {
+                not_done = true;
+                break;
+            }
+        }
     }
 
     for(size_t i=0; i<q; i++){

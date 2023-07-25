@@ -4,6 +4,7 @@
 #include <atomic>
 #include <fstream>
 #include <iostream>
+#include <mutex>
 #include <semaphore.h>
 #include <string>
 #include <sys/stat.h>
@@ -49,7 +50,7 @@ void splitIntoBF(std::size_t id, const std::size_t k, const std::size_t fifo_siz
 
 void splitQueryBF(std::size_t id, const std::size_t k, const std::size_t fifo_size, const std::size_t bf_size,
                   const std::size_t outbv_size, const std::size_t outbv_nb, std::atomic<std::size_t>* counter, 
-                  Kmer** fifo, bm::bvector<>* bf, bm::bvector<>* outbv, sem_t* empty, sem_t* full);
+                  Kmer** fifo, bm::bvector<>* bf, bm::bvector<>* outbv, std::mutex* query_mutex, sem_t* empty, sem_t* full);
 
 // void splitQueryBF(QueryParameters qp);
 
