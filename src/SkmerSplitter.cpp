@@ -128,6 +128,7 @@ void splitQueryBF(std::size_t id, const std::size_t k, const std::size_t fifo_si
         
         } else {
             kmer_pos = (*sk).position;
+            std::cout << '{' << kmer_pos << '}' << (*outbv).test(2);
 			std::string skstr = (*sk).to_string();
 
 			for(std::size_t i=0; i<(*sk).len-k+1; i++){
@@ -145,7 +146,11 @@ void splitQueryBF(std::size_t id, const std::size_t k, const std::size_t fifo_si
             
                 uint32_t hash = (xorshift32(skstr.substr(i,k))) % bf_size;
                 
-                if ((*bf).test(hash)) (*outbv).set(kmer_pos+i);
+                if ((*bf).test(hash)){
+                    // (*outbv).set((kmer_pos+i) % outbv_size);
+                    (*outbv)[(kmer_pos+i) % outbv_size] = true;
+                    // if ((id==2)&&(kmer_pos<50)) std::cout << '<' << (kmer_pos+i) << '|' << (*outbv).test(kmer_pos+i) << '>';
+                } 
 
                 do {
                     desired = expected+1;

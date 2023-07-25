@@ -157,7 +157,13 @@ int main(){
 
     visualizeBitVector(query_answers[0]);
 
-    cout << "counter 0: " << counter[3] << endl;
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    visualizeBitVector(query_answers[0]);
+
+    cout << "counter 0: " << counter[0] << endl;
+
+    std::cout << query_answers[0].test(1) << query_answers[0].test(2) << query_answers[0].test(3) << endl;
 
     return 0;
 }
