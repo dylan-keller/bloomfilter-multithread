@@ -97,8 +97,8 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         counter = 0;
         actual_counter++;
 
-        for(int ii=0; ii<500; ii++){ // TEST
-        //while(c != '\0'){ // \0 should be returned at the end of a sequence
+        // for(int ii=0; ii<1100; ii++){ // TEST
+        while(c != '\0'){ // \0 should be returned at the end of a sequence
 
             // Get the hash value of the new m-mer (rightmost)
             NTC64(kmer_cur[k-m], c, m, fhVal, rhVal);

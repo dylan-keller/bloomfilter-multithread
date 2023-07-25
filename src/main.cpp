@@ -55,7 +55,7 @@ int main(){
     const size_t bf_size = 1024;
     const size_t nb_query_buffers = 8;
     const size_t size_query_buffers = 1024;
-    size_t last_locked_buffer = nb_query_buffers-1;
+    size_t next_locked_buffer = 0;
 
     Kmer* fifos[q*fifo_size];
 
@@ -66,7 +66,7 @@ int main(){
     bm::bvector<> query_answers[nb_query_buffers];
     mutex query_mutex[nb_query_buffers];
 
-    query_mutex[last_locked_buffer].lock();
+    query_mutex[nb_query_buffers-1].lock(); // we lock the last buffer
 
     sem_t emptys[q];
     sem_t fulls[q];
@@ -131,11 +131,12 @@ int main(){
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         cout << "<new loop " << counter[nb_query_buffers] << ">\n";
 
-        if (counter[(last_locked_buffer+1)%nb_query_buffers] == size_query_buffers){
-            query_mutex[(last_locked_buffer+1)%nb_query_buffers].lock();
-            query_mutex[last_locked_buffer].unlock();
+        if (counter[next_locked_buffer] == size_query_buffers){
+            query_mutex[next_locked_buffer].lock();
+            counter[next_locked_buffer] = 0;
+            query_mutex[(next_locked_buffer + nb_query_buffers-1)%nb_query_buffers].unlock(); //unlock the previous one
 
-            last_locked_buffer = (last_locked_buffer+1)%nb_query_buffers;
+            next_locked_buffer = (next_locked_buffer+1)%nb_query_buffers;
         }
     }
 
@@ -156,7 +157,7 @@ int main(){
 
     visualizeBitVector(query_answers[0]);
 
-    cout << "counter 0: " << counter[0] << endl;
+    cout << "counter 0: " << counter[3] << endl;
 
     return 0;
 }
