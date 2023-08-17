@@ -11,13 +11,14 @@
 #include <thread>
 #include <vector>
 
-// #include "/mnt/c/Users/dylan/Documents/M1/stage/projet2/bloomfilter-multithread/external/ntHash-AVX512/ntHashIterator.hpp"
-// #include "/mnt/c/Users/dylan/Documents/M1/stage/projet2/bloomfilter-multithread/external/bitmagic/src/bm.h"
-#include "/home/dylan/Documents/code/ntHash-AVX512-rs_avx/ntHashIterator.hpp"
-#include "/home/dylan/Documents/code/bloomfilter-multithread/external/bitmagic/src/bm.h"
-//#include "external/ntHash-AVX512/ntHashIterator.hpp"
+#include "/mnt/c/Users/dylan/Documents/M1/stage/projet2/bloomfilter-multithread/external/ntHash-AVX512/ntHashIterator.hpp"
+#include "/mnt/c/Users/dylan/Documents/M1/stage/projet2/bloomfilter-multithread/external/bitmagic/src/bm.h"
+// #include "/home/dylan/Documents/code/ntHash-AVX512-rs_avx/ntHashIterator.hpp"
+// #include "/home/dylan/Documents/code/bloomfilter-multithread/external/bitmagic/src/bm.h"
+// #include "external/ntHash-AVX512/ntHashIterator.hpp"
 #include "FastaReader.hpp"
 #include "Kmer.hpp"
+#include "KmerAnswer.hpp"
 #include "SkmerExtractor.hpp"
 #include "SkmerSplitter.hpp"
 
@@ -41,59 +42,88 @@ void visualizeBitVector(const bm::bvector<>& bv) {
     }
 }
 
+void invalid_message_exit() {
+  std::cout << "Expected format is : \n\n"
+            << "./main data_in query_in result_out k m t\n\n"
+            << "With - data_in : path to FASTA file to be queried\n"
+            << "     - query_in : path to FASTA file containing the query\n"
+            << "     - result_out : path to file where the output will be saved\n"
+            << "     - k : k-mer size\n"
+            << "     - m : minimizer size, inferior to k\n"
+            << "     - t : number of threads\n";
+  exit(1);
+}
+
 // ------------------------------------------------------------
 
-int main(){
-    cout << "hello, i do nothing for now\n";
+int main(int argc, char *argv[]){
+
+    if (argc == 7) {
+        std::cout << "FAILED : Invalid number of arguments. ";
+        invalid_message_exit();
+    }
+
+    const uint16_t k = (uint16_t)atoi(argv[4]);
+    const uint16_t m = (uint16_t)atoi(argv[5]);
+    //const uint16_t q = (uint16_t)atoi(argv[6]);
+
+    // cout << k << endl;
+
+    // invalid_message_exit();
+
+    // ------------------------------------------------------------
 
     cout << "----------------------------------------" << endl;
 
-    const size_t k = 30;
-    const size_t m = 15;
-    const size_t q = 3;
+    // const size_t k = 30;
+    // const size_t m = 15;
+    const size_t q = 10;
     const size_t fifo_size = 100;
-    const size_t bf_size = 1024;
+    const size_t bf_size = 65536;
     const size_t nb_query_buffers = 8;
     const size_t size_query_buffers = 1024;
-    size_t next_locked_buffer = 0;
+    atomic<size_t> finished_thread_counter(0);
 
-    Kmer* fifos[q*fifo_size];
+    std::size_t fifo_out_counter[q] = {0};
+    size_t current_buffer[q] = {0};
 
-    bm::bvector<> bfs[q];
+    Kmer* fifos_in[q*fifo_size];
+    KmerAnswer* fifos_out[q*fifo_size];
 
-    atomic<size_t> counter[nb_query_buffers+1] = {}; // = {} initializes all values to zero
-        // last counter used to count finished threads
+    bm::bvector<> bloom_filters[q];
     bm::bvector<> query_answers[nb_query_buffers];
-    mutex query_mutex[nb_query_buffers];
 
-    query_mutex[nb_query_buffers-1].lock(); // we lock the last buffer
+    sem_t emptys_in[q];
+    sem_t fulls_in[q];
+    sem_t emptys_out[q];
+    sem_t fulls_out[q];
 
-    sem_t emptys[q];
-    sem_t fulls[q];
     for(size_t i=0; i<q; i++){
-        bfs[i].resize(bf_size);
-        bfs[i].set_range(0, bf_size, false);
+        bloom_filters[i].resize(bf_size);
+        bloom_filters[i].set_range(0, bf_size, false);
+        sem_init(&(emptys_in[i]), 0, fifo_size);
+        sem_init(&(fulls_in[i]), 0, 0);
+    }
+    for(size_t i=0; i<nb_query_buffers; i++){
         query_answers[i].resize(size_query_buffers);
         query_answers[i].set_range(0, size_query_buffers, false);
-        sem_init(&(emptys[i]), 0, fifo_size);
-        sem_init(&(fulls[i]), 0, 0);
     }
 
-    thread extractor_thread(extractSkmers, "/home/dylan/Documents/sequences/sars-cov-2.fasta",
-            k, m, q, fifo_size, fifos, emptys, fulls, nullptr);
+    thread extractor_thread(extractSkmers, "/mnt/c/Users/dylan/Documents/M1/stage/sequences/sars-cov-2.fasta",
+            k, m, q, fifo_size, fifos_in, emptys_in, fulls_in, nullptr);
 
     thread splitter_threads[q];
 
     /*
     for(size_t i=0; i<q; i++){
         splitter_threads[i] = thread(splitIntoFile, "../testing/", i, k,
-        //                              fifo_size, fifos, true, &emptys[i], &fulls[i]);
-                                        fifo_size, fifos, false, &emptys[i], &fulls[i]);
+        //                              fifo_size, fifos_in, true, &emptys_in[i], &fulls_in[i]);
+                                        fifo_size, fifos_in, false, &emptys_in[i], &fulls_in[i]);
     }
     */
     
     for(size_t i=0; i<q; i++){
-        splitter_threads[i] = thread(splitIntoBF, i, k, fifo_size, bf_size, fifos, &bfs[i], &emptys[i], &fulls[i]);
+        splitter_threads[i] = thread(splitIntoBF, i, k, fifo_size, bf_size, fifos_in, &bloom_filters[i], &emptys_in[i], &fulls_in[i]);
     }
 
     extractor_thread.join();
@@ -103,67 +133,87 @@ int main(){
     }
 
     for(size_t i=0; i<q; i++){
-        sem_destroy(&(emptys[i]));
-        sem_destroy(&(fulls[i]));
+        sem_destroy(&(emptys_in[i]));
+        sem_destroy(&(fulls_in[i]));
     }
 
     cout << "---------- construction  done ----------" << endl;
     cout << "------------- query  start -------------" << endl;
 
     for(size_t i=0; i<q; i++){
-        sem_init(&(emptys[i]), 0, fifo_size);
-        sem_init(&(fulls[i]), 0, 0);
+        sem_init(&(emptys_in[i]), 0, fifo_size);
+        sem_init(&(fulls_in[i]), 0, 0);
+        sem_init(&(emptys_out[i]), 0, fifo_size);
+        sem_init(&(fulls_out[i]), 0, 0);
     }
 
-    thread extractor_thread2(extractSkmers, "/home/dylan/Documents/sequences/query.txt",
-            k, m, q, fifo_size, fifos, emptys, fulls, &counter[nb_query_buffers]);
+    thread extractor_thread2(extractSkmers, "/mnt/c/Users/dylan/Documents/M1/stage/sequences/query.txt",
+            k, m, q, fifo_size, fifos_in, emptys_in, fulls_in, &finished_thread_counter);
 
     thread splitter_threads2[q];
     
     for(size_t i=0; i<q; i++){
-        splitter_threads2[i] = thread(splitQueryBF, i, k, fifo_size, bf_size, 
-                                    size_query_buffers, nb_query_buffers, counter, 
-                                    fifos, &bfs[i], query_answers, 
-                                    query_mutex, &emptys[i], &fulls[i]);
+        splitter_threads2[i] = thread(splitQueryBF, i, k, fifo_size, bf_size,
+                                      size_query_buffers, nb_query_buffers, fifos_in,
+                                      fifos_out, &bloom_filters[i], &emptys_in[i], 
+                                      &fulls_in[i], &emptys_out[i], &fulls_out[i],
+                                      &finished_thread_counter);
     }
+
+    KmerAnswer* skanswer;
+    int semvalue = 0;
+    size_t blocked_buffer = nb_query_buffers-1; // last bitvector is blocked
   
-    while(counter[nb_query_buffers] != q+1){
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        cout << "<new loop " << counter[nb_query_buffers] << ">\n";
+    while(finished_thread_counter != q+1){ // while all other threads are not finished :
+        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // TODO : remove, not necessary anymore thanks to round-robin 
+        cout << "<new loop " << finished_thread_counter << ">\n";
 
-        if (counter[next_locked_buffer] == size_query_buffers){
-            query_mutex[next_locked_buffer].lock();
-            counter[next_locked_buffer] = 0;
-            query_mutex[(next_locked_buffer + nb_query_buffers-1)%nb_query_buffers].unlock(); //unlock the previous one
+        for(size_t i=0; i<q; i++){
+            sem_getvalue(&fulls_out[i], &semvalue); // check how many elements are in thread #i 's fifo
+            while (semvalue > 0) { // while there are still elements to read,
+                // read oldest element
+                skanswer = fifos_out[i*fifo_size + fifo_out_counter[i]];
 
-            next_locked_buffer = (next_locked_buffer+1)%nb_query_buffers;
+                // if it is a super-k-mer that would be written in the blocked bitvector,
+                // we ignore it for now and stop reading this thread
+                if (skanswer->outbv_nb == blocked_buffer) break;
+
+                // else, we write it in our output bitvector
+
+                skanswer->fillOutputVector(&query_answers[skanswer->outbv_nb]); // TODO : overlap
+
+                // since we finished reading a KmerAnswer, we :
+                // update the counter,
+                fifo_out_counter[i] = (fifo_out_counter[i]+1) % fifo_size;
+                // delete the KmerAnswer,
+                delete skanswer;
+                // and update the semaphores to notify a new empty spot in the corresponding fifo
+                sem_wait(&fulls_out[i]);
+                sem_post(&emptys_out[i]);
+                // we also update our semvalue to read the appropriate number of elements
+                semvalue--;
+            }
         }
     }
 
+    // to finish threads cleanly (although they are already done when this code is reached)
     extractor_thread2.join();
+    for(size_t i=0; i<q; i++) splitter_threads2[i].join();
 
     for(size_t i=0; i<q; i++){
-        splitter_threads2[i].join();
-    }
-
-    for(size_t i=0; i<q; i++){
-        sem_destroy(&(emptys[i]));
-        sem_destroy(&(fulls[i]));
+        sem_destroy(&(emptys_in[i]));
+        sem_destroy(&(fulls_in[i]));
+        sem_destroy(&(emptys_out[i]));
+        sem_destroy(&(fulls_out[i]));
     }
 
     cout << "--------------- all done ---------------\n";
 
-    //visualizeBitVector(bfs[0]);
+    // visualizeBitVector(bloom_filters[0]);
+    // visualizeBitVector(query_answers[0]);
+    // cout << "counter 0: " << counter[0] << endl;
 
     visualizeBitVector(query_answers[0]);
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
-
-    visualizeBitVector(query_answers[0]);
-
-    cout << "counter 0: " << counter[0] << endl;
-
-    std::cout << query_answers[0].test(1) << query_answers[0].test(2) << query_answers[0].test(3) << endl;
 
     return 0;
 }

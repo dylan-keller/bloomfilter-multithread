@@ -1,5 +1,7 @@
 #include "../include/SkmerExtractor.hpp"
 
+// TODO : remove "truc" name
+
 void extractSkmers(std::string filename, const std::size_t k, const std::size_t m,
                 const std::size_t q, const std::size_t fifo_size, Kmer** fifos,
                 sem_t* emptys, sem_t* fulls, std::atomic<std::size_t>* end_increment){
@@ -170,14 +172,12 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
                 sem_wait(&emptys[fifo_nb]);
                 // add the super-k-mer in the correct spot
                 ssize_t truc = fifo_nb*fifo_size + fifo_counter[fifo_nb];
-                //std::cout << "put to " << fifo_nb << " in " << truc << ": " << *sk << std::endl;
                 fifos[truc] = sk;
                 // update the counter
                 fifo_counter[fifo_nb] = (fifo_counter[fifo_nb]+1)%fifo_size;
                 // Notifies that a spot has just been filled
                 sem_post(&fulls[fifo_nb]);
                 // We can now create the new super-k-mer, starting at the current k-mer.
-                // delete sk;
                 sk = new Kmer(2*k-m, actual_counter, isRevComp, kmer_cur);
             }
 
