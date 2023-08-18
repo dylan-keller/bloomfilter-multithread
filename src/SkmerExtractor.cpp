@@ -63,7 +63,6 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         }
 
         hVal = NTC64(kmer_cur.c_str(), m, fhVal, rhVal);
-        // std::cout << "[" << fhVal << "_" << rhVal << "]\n";
         fhvalues[0] = fhVal;
         rhvalues[0] = rhVal;
 
@@ -72,7 +71,6 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
             NTC64(kmer_cur[i], kmer_cur[i+m], m, fhVal, rhVal);
             fhvalues[i+1] = fhVal;
             rhvalues[i+1] = rhVal;
-            // std::cout << "{" << i << "_" << fhVal << "_" << rhVal << "}\n";
         }
 
         // Among these m-mers, let's find the minimizer (our first minimizer)
@@ -108,10 +106,6 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
             // Get the next k-mer (rotate the std::string once leftwise, and replace last character)
             rotate(kmer_cur.begin(), kmer_cur.begin()+1, kmer_cur.end());
             kmer_cur[k-1] = c;
-
-            // if (actual_counter<5){
-            //     std::cout << '{' <<  kmer_cur << '_' << fhVal << '_' << rhVal << "}\n";
-            // }
 
             // Place the new hash values in their respective arrays
             // Thanks to 'counter', we can use the array as a circular array
@@ -193,19 +187,17 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         fifo_nb = hmin%q;
         sem_wait(&emptys[fifo_nb]);
         ssize_t truc = fifo_nb*fifo_size + fifo_counter[fifo_nb];
-        //std::cout << "put to " << fifo_nb << " in " << truc << ": " << *sk << std::endl;
         fifos[truc] = sk;
         fifo_counter[fifo_nb] = (fifo_counter[fifo_nb]+1)%fifo_size;
         sem_post(&fulls[fifo_nb]);
     
-    } while (false); // TEST ; for now we don't want to loop over the whole file
-    //} while (fr.has_next());
+    // } while (false); // TEST ; for now we don't want to loop over the whole file
+    } while (fr.has_next());
 
     std::cout << "(((extraction done)))" << std::endl;
 
     for (std::size_t i=0; i<q; i++){
         Kmer* kmer_ender = new Kmer(1, false);
-        //std::cout << "sending kill signal to " << i << std::endl;
         sem_wait(&emptys[i]);
         fifos[i*fifo_size + fifo_counter[i]] = kmer_ender;
         sem_post(&fulls[i]);
