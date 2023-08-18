@@ -17,11 +17,13 @@ class KmerAnswer{
     // Fills the given bitvector at position 'pos' with the bits of 'bv'.
     void fillOutputVector(bm::bvector<>* outbv);
 
-    // Used if the bits to fill are overlapping two bitvectors.
-    //   (example: bv.size = 10, pos = 995, and outbv.size = 1000. not enough room for all bits)
-    // Fills the 'outbv_first' at position 'pos' with the 'bits_first' first bits of 'bv', 
-    // then fills the remaining bits at position 0 of 'outbv_second'
-    void fillOutputVector(bm::bvector<>* outbv_first, bm::bvector<>* outbv_second, std::size_t bits_first);
+    // Fills the 'outbv_first' bitvector at position 'pos' with the bits from 'bv'.
+    // if 'bv' is written near the end of 'outbv_first' and is too big to fit in it,
+    // the first bits of 'bv' are written in 'outbv_first' and the rest in 'outbv_second' starting at position 0
+    void fillOutputVector(bm::bvector<>* outbv_first, bm::bvector<>* outbv_second, std::size_t outbv_size);
+
+    void fillOutputVector(bm::bvector<>* outbv_first, bm::bvector<>* outbv_second, std::size_t outbv_size,
+                          std::size_t* counter_first, std::size_t* counter_second);
 };
 
 #endif

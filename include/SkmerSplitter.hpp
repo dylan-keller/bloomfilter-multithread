@@ -26,10 +26,6 @@ void splitIntoFile(std::string outfile, std::size_t id, const std::size_t k,
 void splitIntoBF(std::size_t id, const std::size_t k, const std::size_t fifo_size,
                  const std::size_t bf_size, Kmer** fifo, bm::bvector<>* bf, sem_t* empty, sem_t* full);
 
-// void splitQueryBF(std::size_t id, const std::size_t k, const std::size_t fifo_size, const std::size_t bf_size,
-//                   const std::size_t outbv_size, const std::size_t outbv_nb, std::atomic<std::size_t>* counter, 
-//                   Kmer** fifo, bm::bvector<>* bf, bm::bvector<>* outbv, std::mutex* query_mutex, sem_t* empty, sem_t* full);
-
 // I chose to keep outbv_size & outbv_nb as parameters, because that means each thread will do the modulo (%) operation on the k-mer position, 
 // taking a little operation off the single thread filling the output (who is already the bottleneck).
 void splitQueryBF(std::size_t id, const std::size_t k, const std::size_t fifo_size, const std::size_t bf_size,

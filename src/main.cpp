@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <mutex>
@@ -13,6 +14,7 @@
 
 #include "/mnt/c/Users/dylan/Documents/M1/stage/projet2/bloomfilter-multithread/external/ntHash-AVX512/ntHashIterator.hpp"
 #include "/mnt/c/Users/dylan/Documents/M1/stage/projet2/bloomfilter-multithread/external/bitmagic/src/bm.h"
+#include "/mnt/c/Users/dylan/Documents/M1/stage/projet2/bloomfilter-multithread/external/bitmagic/src/bmserial.h"
 // #include "/home/dylan/Documents/code/ntHash-AVX512-rs_avx/ntHashIterator.hpp"
 // #include "/home/dylan/Documents/code/bloomfilter-multithread/external/bitmagic/src/bm.h"
 // #include "external/ntHash-AVX512/ntHashIterator.hpp"
@@ -73,19 +75,19 @@ int main(int argc, char *argv[]){
 
     // ------------------------------------------------------------
 
-    cout << "----------------------------------------" << endl;
+    std::cout << "----------------------------------------" << endl;
 
     // const size_t k = 30;
     // const size_t m = 15;
-    const size_t q = 10;
+    const size_t q = 3;
     const size_t fifo_size = 100;
     const size_t bf_size = 65536;
-    const size_t nb_query_buffers = 8;
-    const size_t size_query_buffers = 1024;
+    const size_t nb_query_buffers = 4;
+    const size_t size_query_buffers = 512;
     atomic<size_t> finished_thread_counter(0);
 
     std::size_t fifo_out_counter[q] = {0};
-    size_t current_buffer[q] = {0};
+    size_t buffer_counter[nb_query_buffers] = {0};
 
     Kmer* fifos_in[q*fifo_size];
     KmerAnswer* fifos_out[q*fifo_size];
@@ -137,8 +139,8 @@ int main(int argc, char *argv[]){
         sem_destroy(&(fulls_in[i]));
     }
 
-    cout << "---------- construction  done ----------" << endl;
-    cout << "------------- query  start -------------" << endl;
+    std::cout << "---------- construction  done ----------" << endl;
+    std::cout << "------------- query  start -------------" << endl;
 
     for(size_t i=0; i<q; i++){
         sem_init(&(emptys_in[i]), 0, fifo_size);
@@ -160,14 +162,19 @@ int main(int argc, char *argv[]){
                                       &finished_thread_counter);
     }
 
+    // --------------------------------------------------
+
     KmerAnswer* skanswer;
     int semvalue = 0;
     size_t blocked_buffer = nb_query_buffers-1; // last bitvector is blocked
-  
-    while(finished_thread_counter != q+1){ // while all other threads are not finished :
-        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // TODO : remove, not necessary anymore thanks to round-robin 
-        cout << "<new loop " << finished_thread_counter << ">\n";
+    size_t next_blocked_buffer = 0;
+    bool fifos_are_empty = false;
 
+    std::ofstream outputfile;
+    outputfile.open("/mnt/c/Users/dylan/Documents/M1/stage/sequences/answers.bin", std::ios::binary | std::ios::app);
+  
+    while((finished_thread_counter != q+1) || (!fifos_are_empty)){ // while all other threads are not finished :
+        // std::this_thread::sleep_for(std::chrono::milliseconds(50)); // VALGRIND doesn't work if there is no sleep for some reason 
         for(size_t i=0; i<q; i++){
             sem_getvalue(&fulls_out[i], &semvalue); // check how many elements are in thread #i 's fifo
             while (semvalue > 0) { // while there are still elements to read,
@@ -180,7 +187,14 @@ int main(int argc, char *argv[]){
 
                 // else, we write it in our output bitvector
 
-                skanswer->fillOutputVector(&query_answers[skanswer->outbv_nb]); // TODO : overlap
+                // skanswer->fillOutputVector(&query_answers[skanswer->outbv_nb]); // TODO : overlap
+                skanswer->fillOutputVector(
+                    &query_answers[skanswer->outbv_nb], 
+                    &query_answers[(skanswer->outbv_nb+1)%nb_query_buffers], 
+                    size_query_buffers, 
+                    &buffer_counter[skanswer->outbv_nb],
+                    &buffer_counter[((skanswer->outbv_nb+1)%nb_query_buffers)]
+                );
 
                 // since we finished reading a KmerAnswer, we :
                 // update the counter,
@@ -193,6 +207,34 @@ int main(int argc, char *argv[]){
                 // we also update our semvalue to read the appropriate number of elements
                 semvalue--;
             }
+        }
+        next_blocked_buffer = (blocked_buffer+1)%nb_query_buffers;
+
+        std::cout << "<" << buffer_counter[next_blocked_buffer] << ">\n";
+        while (buffer_counter[next_blocked_buffer] == size_query_buffers){
+            // bm::serializer<bm::bvector<>>::serialize(
+            //      query_answers[next_blocked_buffer], outputfile, size_query_buffers
+            // );
+
+            // TODO : write in output file 
+            
+            query_answers[next_blocked_buffer].set_range(0, size_query_buffers, false);
+            buffer_counter[next_blocked_buffer] = 0;
+            blocked_buffer = next_blocked_buffer;
+            next_blocked_buffer = (blocked_buffer+1)%nb_query_buffers;
+            std::cout << '/' << blocked_buffer << "/\n";
+        }
+        
+        fifos_are_empty = true;
+        for(size_t i=0; i<q; i++){
+            sem_getvalue(&fulls_out[i], &semvalue);
+            std::cout << semvalue;
+            if (semvalue > 0){ 
+                std::cout << "!a!\n";
+                fifos_are_empty = false;
+                break;
+            }
+            std::cout << "\n";
         }
     }
 
@@ -207,13 +249,21 @@ int main(int argc, char *argv[]){
         sem_destroy(&(fulls_out[i]));
     }
 
-    cout << "--------------- all done ---------------\n";
+    std::cout << "--------------- all done ---------------\n";
 
     // visualizeBitVector(bloom_filters[0]);
     // visualizeBitVector(query_answers[0]);
     // cout << "counter 0: " << counter[0] << endl;
 
     visualizeBitVector(query_answers[0]);
+    visualizeBitVector(query_answers[1]);
+    visualizeBitVector(query_answers[2]);
+    visualizeBitVector(query_answers[3]);
+    std::cout << buffer_counter[0] << " ----- " << buffer_counter[1] << " ----- " ;
+    std::cout << buffer_counter[2] << " ----- " << buffer_counter[3] << endl;
+    
+
+    outputfile.close();
 
     return 0;
 }
