@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-#include "/mnt/c/Users/dylan/Documents/M1/stage/projet2/bloomfilter-multithread/external/bitmagic/src/bm.h"
+#include "../external/bitmagic/src/bm.h"
 
 class KmerAnswer{
   public :

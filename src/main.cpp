@@ -12,12 +12,9 @@
 #include <thread>
 #include <vector>
 
-#include "/mnt/c/Users/dylan/Documents/M1/stage/projet2/bloomfilter-multithread/external/ntHash-AVX512/ntHashIterator.hpp"
-#include "/mnt/c/Users/dylan/Documents/M1/stage/projet2/bloomfilter-multithread/external/bitmagic/src/bm.h"
-#include "/mnt/c/Users/dylan/Documents/M1/stage/projet2/bloomfilter-multithread/external/bitmagic/src/bmserial.h"
-// #include "/home/dylan/Documents/code/ntHash-AVX512-rs_avx/ntHashIterator.hpp"
-// #include "/home/dylan/Documents/code/bloomfilter-multithread/external/bitmagic/src/bm.h"
-// #include "external/ntHash-AVX512/ntHashIterator.hpp"
+#include "../external/ntHash-AVX512/ntHashIterator.hpp"
+#include "../external/bitmagic/src/bm.h"
+#include "../external/bitmagic/src/bmserial.h"
 #include "FastaReader.hpp"
 #include "Kmer.hpp"
 #include "KmerAnswer.hpp"
@@ -111,7 +108,7 @@ int main(int argc, char *argv[]){
         query_answers[i].set_range(0, size_query_buffers, false);
     }
 
-    thread extractor_thread(extractSkmers, "/mnt/c/Users/dylan/Documents/M1/stage/sequences/sars-cov-2.fasta",
+    thread extractor_thread(extractSkmers, "../inputs/sars-cov-2.fasta",
             k, m, q, fifo_size, fifos_in, emptys_in, fulls_in, nullptr);
 
     thread splitter_threads[q];
@@ -149,7 +146,7 @@ int main(int argc, char *argv[]){
         sem_init(&(fulls_out[i]), 0, 0);
     }
 
-    thread extractor_thread2(extractSkmers, "/mnt/c/Users/dylan/Documents/M1/stage/sequences/query.txt",
+    thread extractor_thread2(extractSkmers, "../inputs/query.txt",
             k, m, q, fifo_size, fifos_in, emptys_in, fulls_in, &finished_thread_counter);
 
     thread splitter_threads2[q];
@@ -171,7 +168,7 @@ int main(int argc, char *argv[]){
     bool fifos_are_empty = false;
 
     std::ofstream outputfile;
-    outputfile.open("/mnt/c/Users/dylan/Documents/M1/stage/sequences/answers.bin", std::ios::binary | std::ios::app);
+    outputfile.open("../outputs/answers.bin", std::ios::binary | std::ios::app);
   
     while((finished_thread_counter != q+1) || (!fifos_are_empty)){ // while all other threads are not finished :
         // std::this_thread::sleep_for(std::chrono::milliseconds(50)); // VALGRIND doesn't work if there is no sleep for some reason 

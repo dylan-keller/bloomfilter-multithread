@@ -14,8 +14,7 @@
 
 #include "Kmer.hpp"
 #include "KmerAnswer.hpp"
-#include "/mnt/c/Users/dylan/Documents/M1/stage/projet2/bloomfilter-multithread/external/bitmagic/src/bm.h"
-// #include "/home/dylan/Documents/code/bloomfilter-multithread/external/bitmagic/src/bm.h"
+#include "../external/bitmagic/src/bm.h"
 
 uint32_t xorshift32(const std::string& str);
 
