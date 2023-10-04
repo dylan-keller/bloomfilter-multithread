@@ -1,18 +1,29 @@
 #include "../include/Kmer.hpp"
 
-//Kmer::Kmer(){}
+// ------------------------------ constructors ------------------------------
 
-Kmer::Kmer(std::size_t k_, bool isRevComp_) : arr(1+((k_-1)/32), 0), k{k_}, len{0}, isRevComp{isRevComp_}{}
+Kmer::Kmer(std::size_t k_, bool isRevComp_) : arr(1+((k_-1)/32), 0), k{k_}, len{0}, 
+                                              position{0}, isRevComp{isRevComp_}{}
 
-Kmer::Kmer(std::size_t k_, bool isRevComp_, std::string seq) : arr(1+((k_-1)/32), 0), k{k_}, len{0}, isRevComp{isRevComp_}{
-    // NOTE : try to make this function faster perhaps
-    for (std::size_t i=0; i<seq.length(); i++){
-        addNucl(seq[i]);
-    }
+Kmer::Kmer(std::size_t k_, std::size_t pos, bool isRevComp_) : arr(1+((k_-1)/32), 0), k{k_}, len{0}, 
+                                                               position{pos}, isRevComp{isRevComp_}{}
+
+Kmer::Kmer(std::size_t k_, bool isRevComp_, std::string seq) : arr(1+((k_-1)/32), 0), k{k_}, len{0}, 
+                                                               position{0}, isRevComp{isRevComp_}
+{
+    // NOTE : try to make this part faster perhaps
+    for (std::size_t i=0; i<seq.length(); i++) addNucl(seq[i]);
+}
+
+Kmer::Kmer(std::size_t k_, std::size_t pos, bool isRevComp_, std::string seq) : arr(1+((k_-1)/32), 0), k{k_}, len{0}, 
+                                                                                position{pos}, isRevComp{isRevComp_}
+{
+    for (std::size_t i=0; i<seq.length(); i++) addNucl(seq[i]);
 }
 
 Kmer::Kmer(const Kmer& km): arr(km.arr), k{km.k}, len{km.len}, isRevComp{km.isRevComp} {}
 
+// ------------------------------ functions ------------------------------
 
 void Kmer::addNucl(char c){
     arr.at(len/32) |= ((c>>1)&(3UL)) << (2*(len%32));

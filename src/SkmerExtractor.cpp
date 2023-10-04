@@ -1,8 +1,10 @@
 #include "../include/SkmerExtractor.hpp"
 
+// TODO : remove "truc" name
+
 void extractSkmers(std::string filename, const std::size_t k, const std::size_t m,
                 const std::size_t q, const std::size_t fifo_size, Kmer** fifos,
-                sem_t* emptys, sem_t* fulls){
+                sem_t* emptys, sem_t* fulls, std::atomic<std::size_t>* end_increment){
     
     // ------------------------------ Variables ------------------------------ 
 
@@ -19,7 +21,7 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
     uint64_t rhvalues[k-m+1];
 
     // The forward (resp. reverse-strand) hash values
-    uint64_t fhVal=0, rhVal=0; 
+    uint64_t hVal=0, fhVal=0, rhVal=0; 
 
     // Tells us our kmer is reverse complement or not
     bool isRevComp;
@@ -32,8 +34,9 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
     uint64_t rhmin; // hash value of the reverse-strand minimizer 
     uint64_t hmin;  // hash value of the canonical minimizer 
 
-    // Loop counter (used for our circular arrays fhvalues and rhvalues)
+    // Loop counter (used for our circular arrays fhvalues and rhvalues) and normal counter
     uint16_t counter;
+    uint64_t actual_counter = 0;
     
     // Threads, each associated to a super-k-mer fifo
     std::vector<std::thread> thread_fifos;
@@ -59,11 +62,15 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
             kmer_cur[i] = fr.next_char();
         }
 
+        hVal = NTC64(kmer_cur.c_str(), m, fhVal, rhVal);
+        fhvalues[0] = fhVal;
+        rhvalues[0] = rhVal;
+
         // Let's compute the hash values of all m-mers in our first k-mer using ntHash
-        for (std::size_t i=0; i<k-m+1; i++){
+        for (std::size_t i=0; i<k-m; i++){
             NTC64(kmer_cur[i], kmer_cur[i+m], m, fhVal, rhVal);
-            fhvalues[i] = fhVal;
-            rhvalues[i] = rhVal;
+            fhvalues[i+1] = fhVal;
+            rhvalues[i+1] = rhVal;
         }
 
         // Among these m-mers, let's find the minimizer (our first minimizer)
@@ -83,21 +90,22 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         } 
 
         // We create the first super-k-mer with our current k-mer
-        Kmer* sk = new Kmer(2*k-m, isRevComp, kmer_cur);
+        Kmer* sk = new Kmer(2*k-m, actual_counter, isRevComp, kmer_cur);
 
         // And we start reading the rest of the file
         c = fr.next_char();
         counter = 0;
+        actual_counter++;
 
-        //for(int ii=0; ii<300; ii++){ // TEST
+        // for(int ii=0; ii<1100; ii++){ // TEST
         while(c != '\0'){ // \0 should be returned at the end of a sequence
+
+            // Get the hash value of the new m-mer (rightmost)
+            NTC64(kmer_cur[k-m], c, m, fhVal, rhVal);
 
             // Get the next k-mer (rotate the std::string once leftwise, and replace last character)
             rotate(kmer_cur.begin(), kmer_cur.begin()+1, kmer_cur.end());
             kmer_cur[k-1] = c;
-
-            // Get the hash value of the new m-mer (rightmost)
-            NTC64(kmer_cur[k-m-1], kmer_cur[k-1], m, fhVal, rhVal);
 
             // Place the new hash values in their respective arrays
             // Thanks to 'counter', we can use the array as a circular array
@@ -158,21 +166,19 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
                 sem_wait(&emptys[fifo_nb]);
                 // add the super-k-mer in the correct spot
                 ssize_t truc = fifo_nb*fifo_size + fifo_counter[fifo_nb];
-                //std::cout << "put to " << fifo_nb << " in " << truc << ": " << *sk << std::endl;
                 fifos[truc] = sk;
                 // update the counter
                 fifo_counter[fifo_nb] = (fifo_counter[fifo_nb]+1)%fifo_size;
                 // Notifies that a spot has just been filled
                 sem_post(&fulls[fifo_nb]);
                 // We can now create the new super-k-mer, starting at the current k-mer.
-                // delete sk;
-                sk = new Kmer(2*k-m, isRevComp, kmer_cur);
+                sk = new Kmer(2*k-m, actual_counter, isRevComp, kmer_cur);
             }
 
             c = fr.next_char();
             counter = (counter+1)%(k-m+1);
+            actual_counter++;
             new_skmer_flag = false;
-
         }
 
         // when the sequence (or file) is over, we need to send the final super-k-mer
@@ -181,22 +187,24 @@ void extractSkmers(std::string filename, const std::size_t k, const std::size_t 
         fifo_nb = hmin%q;
         sem_wait(&emptys[fifo_nb]);
         ssize_t truc = fifo_nb*fifo_size + fifo_counter[fifo_nb];
-        //std::cout << "put to " << fifo_nb << " in " << truc << ": " << *sk << std::endl;
         fifos[truc] = sk;
         fifo_counter[fifo_nb] = (fifo_counter[fifo_nb]+1)%fifo_size;
         sem_post(&fulls[fifo_nb]);
     
-    //} while (false); // TEST ; for now we don't want to loop over the whole file
+    // } while (false); // TEST ; for now we don't want to loop over the whole file
     } while (fr.has_next());
 
     std::cout << "(((extraction done)))" << std::endl;
 
     for (std::size_t i=0; i<q; i++){
         Kmer* kmer_ender = new Kmer(1, false);
-        //std::cout << "sending kill signal to " << i << std::endl;
         sem_wait(&emptys[i]);
         fifos[i*fifo_size + fifo_counter[i]] = kmer_ender;
         sem_post(&fulls[i]);
+    }
+
+    if (end_increment != nullptr){
+        end_increment[0]++;
     }
 
     std::cout << "[extractor thread over]" << std::endl;
