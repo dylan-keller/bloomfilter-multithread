@@ -8,11 +8,11 @@ SRC_DIR ?= src/
 DEPS_DIR ?= deps/
 INC_DIR ?= include/
 EXEC_NAME ?= main
-LIBS :=
+LIBS := 
 
 CPP := g++
 OPTI ?= -O2
-CPPFLAGS := $(OPTI) -std=c++11 -Wall -Wextra -I $(INC_DIR)
+CPPFLAGS := $(OPTI) -std=c++11 -pthread -g -Wall -Wextra -I $(INC_DIR)
 
 CPP_FILES = $(shell find $(SRC_DIR) | grep '.cpp$$')
 HPP_FILES = $(shell find $(INC_DIR) | grep '.hpp$$')
